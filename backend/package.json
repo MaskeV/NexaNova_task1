@@ -21,6 +21,6 @@
 
   "scripts":{
   "start": "node server.js",
-  "de": "nodemon server.js"
+  "dev": "nodemon server.js"
 }
 }
