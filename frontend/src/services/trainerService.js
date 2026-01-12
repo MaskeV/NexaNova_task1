@@ -1,18 +1,55 @@
-import axios from "axios";
+// src/services/trainerService.js
+import api from './api';
+import { API_ENDPOINTS } from '../utils/constants';
 
-const BASE_URL = "http://localhost:8080"; // backend URL
+// Get all trainers
+export const getAllTrainers = async () => {
+  try {
+    const response = await api.get(API_ENDPOINTS.TRAINERS);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export const getAllTrainers = () =>
-  axios.get(`${BASE_URL}/trainer`);
+// Get trainer by ID
+export const getTrainerById = async (empId) => {
+  try {
+    const response = await api.get(API_ENDPOINTS.TRAINER_BY_ID(empId));
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export const addTrainer = (trainer) =>
-  axios.post(`${BASE_URL}/trainer`, trainer);
+// Get trainers by subject
+export const getTrainersBySubject = async (subject) => {
+  try {
+    const response = await api.get(API_ENDPOINTS.TRAINERS_BY_SUBJECT(subject));
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export const deleteTrainer = (id) =>
-  axios.delete(`${BASE_URL}/trainer`, { data: { empId: id } });
+// Add new trainer
+export const addTrainer = async (trainerData) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.TRAINERS, trainerData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export const getTrainerById = (id) =>
-  axios.get(`${BASE_URL}/trainer/${id}`);
-
-export const getTrainerBySubject = (subject) =>
-  axios.get(`${BASE_URL}/trainer/${subject}/topic`);
+// Delete trainer
+export const deleteTrainer = async (empId) => {
+  try {
+    const response = await api.delete(API_ENDPOINTS.TRAINERS, {
+      data: { empId }
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
