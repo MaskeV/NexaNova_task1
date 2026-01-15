@@ -1,4 +1,5 @@
 // src/services/api.js
+// src/services/api.js
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 
@@ -11,11 +12,13 @@ const api = axios.create({
   timeout: 10000, // 10 seconds
 });
 
-// Request interceptor
+// Request interceptor - add auth token
 api.interceptors.request.use(
   (config) => {
-    // You can add auth tokens here if needed in future
-    // config.headers.Authorization = `Bearer ${token}`;
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -31,10 +34,13 @@ api.interceptors.response.use(
   (error) => {
     // Handle common errors
     if (error.response) {
-      // Server responded with error
+      // Unauthorized - clear token and redirect to login
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
       console.error('API Error:', error.response.data.message);
     } else if (error.request) {
-      // Request made but no response
       console.error('Network Error:', error.message);
     } else {
       console.error('Error:', error.message);

@@ -1,5 +1,5 @@
 // src/components/Trainers/AddTrainer.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { addTrainer, getAllTrainers } from '../../services/trainerService';
 import { getAllSubjects } from '../../services/subjectService';
 import { toast } from 'react-toastify';
@@ -17,11 +17,26 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
   const [errors, setErrors] = useState({});
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  const dropdownRef = useRef(null);
 
   // Auto-generate Employee ID and fetch subjects on component mount
   useEffect(() => {
     generateEmpId();
     fetchAvailableSubjects();
+    
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const fetchAvailableSubjects = async () => {
@@ -75,17 +90,21 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
     }
   };
 
-  const handleSubjectChange = (e) => {
-    const options = e.target.options;
-    const selectedSubjects = [];
-    for (let i = 0; i < options.length; i++) {
-      if (options[i].selected) {
-        selectedSubjects.push(options[i].value);
-      }
+  const handleSubjectToggle = (subjectId) => {
+    const currentSubjects = [...formData.subjects];
+    const index = currentSubjects.indexOf(subjectId);
+    
+    if (index === -1) {
+      // Add subject if not already selected
+      currentSubjects.push(subjectId);
+    } else {
+      // Remove subject if already selected
+      currentSubjects.splice(index, 1);
     }
+    
     setFormData({
       ...formData,
-      subjects: selectedSubjects
+      subjects: currentSubjects
     });
     
     if (errors.subjects) {
@@ -94,6 +113,35 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
         subjects: ''
       });
     }
+  };
+
+  const handleSelectAll = () => {
+    const allSubjectIds = availableSubjects.map(subject => subject.subjectId);
+    setFormData({
+      ...formData,
+      subjects: allSubjectIds
+    });
+  };
+
+  const handleClearAll = () => {
+    setFormData({
+      ...formData,
+      subjects: []
+    });
+  };
+
+  const toggleDropdown = () => {
+    if (availableSubjects.length > 0) {
+      setDropdownOpen(!dropdownOpen);
+    }
+  };
+
+  const removeSubject = (subjectId) => {
+    const updatedSubjects = formData.subjects.filter(id => id !== subjectId);
+    setFormData({
+      ...formData,
+      subjects: updatedSubjects
+    });
   };
 
   const validateForm = async () => {
@@ -194,7 +242,7 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: formData.phone.trim(),
-        subjects: formData.subjects, // Already array of subject IDs
+        subjects: formData.subjects,
         experience: parseInt(formData.experience) || 0
       };
 
@@ -243,7 +291,7 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
               type="text"
               name="name"
               className={`form-control ${errors.name ? 'error' : ''}`}
-              placeholder="John Doe"
+              placeholder="Ram Kale"
               value={formData.name}
               onChange={handleChange}
               required
@@ -260,7 +308,7 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
               type="email"
               name="email"
               className={`form-control ${errors.email ? 'error' : ''}`}
-              placeholder="john@example.com"
+              placeholder="ram@example.com"
               value={formData.email}
               onChange={handleChange}
               required
@@ -287,7 +335,7 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
         </div>
 
         <div className="form-row">
-          <div className="form-group">
+          <div className="form-group" ref={dropdownRef}>
             <label>Subjects (select from existing subjects)</label>
             {loadingSubjects ? (
               <div className="loading-subjects">Loading subjects...</div>
@@ -298,22 +346,73 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
               </div>
             ) : (
               <>
-                <select
-                  multiple
-                  name="subjects"
-                  className={`form-control multi-select ${errors.subjects ? 'error' : ''}`}
-                  value={formData.subjects}
-                  onChange={handleSubjectChange}
-                  size="5"
+                <div 
+                  className={`custom-dropdown ${errors.subjects ? 'error' : ''} ${dropdownOpen ? 'open' : ''}`}
+                  onClick={toggleDropdown}
                 >
-                  {availableSubjects.map((subject) => (
-                    <option key={subject.subjectId} value={subject.subjectId}>
-                      {subject.subjectId} - {subject.name}
-                    </option>
-                  ))}
-                </select>
+                  <div className="dropdown-selected">
+                    {formData.subjects.length === 0 
+                      ? <span className="placeholder">Click to select subjects</span>
+                      : <span className="selected-count">{formData.subjects.length} subject(s) selected</span>
+                    }
+                    <span className={`dropdown-arrow ${dropdownOpen ? 'up' : 'down'}`}>
+                      {dropdownOpen ? '▲' : '▼'}
+                    </span>
+                  </div>
+                  
+                  {dropdownOpen && (
+                    <div className="dropdown-menu">
+                      <div className="dropdown-header">
+                        <div className="dropdown-title">Select Subjects</div>
+                        <div className="dropdown-actions">
+                          <button 
+                            type="button" 
+                            className="action-btn select-all"
+                            onClick={handleSelectAll}
+                          >
+                            Select All
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-btn clear-all"
+                            onClick={handleClearAll}
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="dropdown-options">
+                        {availableSubjects.map((subject) => (
+                          <div 
+                            key={subject.subjectId} 
+                            className={`dropdown-option ${formData.subjects.includes(subject.subjectId) ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSubjectToggle(subject.subjectId);
+                            }}
+                          >
+                            <div className="option-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={formData.subjects.includes(subject.subjectId)}
+                                onChange={() => {}}
+                                className="checkbox"
+                              />
+                            </div>
+                            <div className="option-content">
+                              <div className="option-id">{subject.subjectId}</div>
+                              <div className="option-name">{subject.name}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 {errors.subjects && <span className="error-text">{errors.subjects}</span>}
-                <small>Hold Ctrl/Cmd to select multiple subjects</small>
+                <small>Click to open dropdown and select multiple subjects</small>
               </>
             )}
           </div>
@@ -335,23 +434,38 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
           </div>
         </div>
 
-        <div className="selected-subjects-preview">
-          <strong>Selected Subjects: </strong>
-          {formData.subjects.length > 0 ? (
+        {formData.subjects.length > 0 && (
+          <div className="selected-subjects-preview">
+            <div className="preview-header">
+              <strong>Selected Subjects ({formData.subjects.length})</strong>
+              <button 
+                type="button" 
+                className="clear-preview-btn"
+                onClick={handleClearAll}
+              >
+                Clear All
+              </button>
+            </div>
             <div className="selected-tags">
               {formData.subjects.map((subjectId) => {
                 const subject = availableSubjects.find(s => s.subjectId === subjectId);
                 return (
                   <span key={subjectId} className="selected-tag">
                     {subject?.name || subjectId}
+                    <button 
+                      type="button" 
+                      className="remove-tag-btn"
+                      onClick={() => removeSubject(subjectId)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
                   </span>
                 );
               })}
             </div>
-          ) : (
-            <span className="no-selection">None selected</span>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={loading}>
