@@ -1,9 +1,11 @@
 // src/app.js
 const express = require('express');
 const cors = require('cors');
+const authRoutes = require('./routes/authRoutes');
 const trainerRoutes = require('./routes/trainerRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
+const { protect } = require('./middlewares/authMiddleware');
 
 const app = express();
 
@@ -19,6 +21,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'Running',
     endpoints: {
+      auth: '/auth',
       trainers: '/trainer',
       subjects: '/subject'
     }
@@ -46,6 +49,9 @@ app.get('/test-db', (req, res) => {
 });
 
 // API Routes
+app.use('/auth', authRoutes);
+
+// Protected routes - require authentication (middleware applied in routes themselves)
 app.use('/trainer', trainerRoutes);
 app.use('/subject', subjectRoutes);
 

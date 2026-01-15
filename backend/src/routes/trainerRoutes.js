@@ -8,6 +8,10 @@ const {
   getTrainerById,
   getTrainersBySubject
 } = require('../controllers/trainerController');
+const { protect } = require('../middlewares/authMiddleware');
+
+// Apply protect middleware to all routes
+router.use(protect);
 
 // /trainer routes
 router.post('/', addTrainer);

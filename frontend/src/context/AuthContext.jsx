@@ -1,6 +1,5 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import * as authService from '../services/authService';
 
@@ -17,7 +16,6 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Check for existing token on mount
   useEffect(() => {
@@ -44,7 +42,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', response.token);
       setUser(response.data);
       toast.success('Login successful!');
-      navigate('/');
+      // Redirect using window.location instead of useNavigate
+      window.location.href = '/';
       return response;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -58,7 +57,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', response.token);
       setUser(response.data);
       toast.success('Registration successful!');
-      navigate('/');
+      // Redirect using window.location instead of useNavigate
+      window.location.href = '/';
       return response;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -70,7 +70,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     toast.success('Logged out successfully');
-    navigate('/login');
+    // Redirect using window.location instead of useNavigate
+    window.location.href = '/login';
   };
 
   const updatePassword = async (passwords) => {

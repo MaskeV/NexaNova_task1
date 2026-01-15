@@ -1,5 +1,4 @@
 // src/services/api.js
-// src/services/api.js
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 
@@ -12,9 +11,10 @@ const api = axios.create({
   timeout: 10000, // 10 seconds
 });
 
-// Request interceptor - add auth token
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Add auth token if exists
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -26,25 +26,36 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - COMPLETELY FIXED
 api.interceptors.response.use(
   (response) => {
+    // Success response
     return response;
   },
   (error) => {
-    // Handle common errors
+    // Error handling
     if (error.response) {
-      // Unauthorized - clear token and redirect to login
+      // Server responded with an error status
+      const message = error.response.data?.message || error.response.statusText || 'Server Error';
+      console.error('API Error:', message);
+      
+      // Handle 401 Unauthorized
       if (error.response.status === 401) {
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
       }
-      console.error('API Error:', error.response.data.message);
     } else if (error.request) {
-      console.error('Network Error:', error.message);
+      // Request was made but no response received
+      console.error('Network Error: No response from server');
     } else {
+      // Something else happened
       console.error('Error:', error.message);
     }
+    
+    // Always reject the promise so the caller can handle it
     return Promise.reject(error);
   }
 );

@@ -1,33 +1,77 @@
 // src/components/Auth/Login.jsx
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { FaEnvelope, FaLock, FaSignInAlt } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';
+import { login } from '../../services/authService';
+import { toast } from 'react-toastify';
+import { VALIDATION } from '../../utils/constants';
 import '../../styles/pages/Auth.css';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!VALIDATION.EMAIL_REGEX.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+
+    if (!validateForm()) {
+      toast.error('Please fix all errors');
+      return;
+    }
 
     try {
-      await login(formData);
+      setLoading(true);
+
+      const credentials = {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password
+      };
+
+      await login(credentials);
+      
+      toast.success('Login successful! Welcome back!');
+      navigate('/');
     } catch (error) {
       console.error('Login error:', error);
+      
+      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -35,43 +79,39 @@ const Login = () => {
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-card card">
         <div className="auth-header">
           <h1>Welcome Back</h1>
-          <p>Sign in to your NexaNova account</p>
+          <p>Login to your NexaNova account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label htmlFor="email">
-              <FaEnvelope /> Email
-            </label>
+            <label>Email</label>
             <input
               type="email"
-              id="email"
               name="email"
+              className={`form-control ${errors.email ? 'error' : ''}`}
+              placeholder="john@example.com"
               value={formData.email}
               onChange={handleChange}
-              placeholder="Enter your email"
               required
-              className="form-control"
             />
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">
-              <FaLock /> Password
-            </label>
+            <label>Password</label>
             <input
               type="password"
-              id="password"
               name="password"
+              className={`form-control ${errors.password ? 'error' : ''}`}
+              placeholder="Enter password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Enter your password"
               required
-              className="form-control"
             />
+            {errors.password && <span className="error-text">{errors.password}</span>}
           </div>
 
           <button 
@@ -79,17 +119,13 @@ const Login = () => {
             className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? 'Signing in...' : (
-              <>
-                <FaSignInAlt /> Sign In
-              </>
-            )}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
-            Don't have an account? <Link to="/register">Sign up</Link>
+            Don't have an account? <Link to="/register">Sign up here</Link>
           </p>
         </div>
       </div>

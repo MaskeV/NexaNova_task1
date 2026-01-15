@@ -5,6 +5,10 @@ export const API_BASE_URL = 'http://localhost:5000';
 
 // API Endpoints
 export const API_ENDPOINTS = {
+  // Auth endpoints
+  REGISTER: '/auth/register',
+  LOGIN: '/auth/login',
+  
   // Trainer endpoints
   TRAINERS: '/trainer',
   TRAINER_BY_ID: (id) => `/trainer/${id}`,
@@ -23,12 +27,17 @@ export const TOAST_MESSAGES = {
   SUBJECT_ADDED: 'Subject added successfully!',
   SUBJECT_ERROR: 'Error with subject operation',
   NETWORK_ERROR: 'Network error. Please check your connection.',
+  AUTH_SUCCESS: 'Authentication successful!',
+  AUTH_ERROR: 'Authentication failed',
+  REGISTRATION_SUCCESS: 'Registration successful!',
+  LOGIN_SUCCESS: 'Login successful!',
 };
 
 // Form Validation
 export const VALIDATION = {
   EMAIL_REGEX: /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
   PHONE_REGEX: /^[0-9]{10}$/,
+  PASSWORD_MIN_LENGTH: 6,
 };
 
 // Subject Levels

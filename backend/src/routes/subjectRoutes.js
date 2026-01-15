@@ -6,12 +6,14 @@ const {
   getAllSubjects,
   getSubjectWithTrainers
 } = require('../controllers/subjectController');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// /subject routes
-router.post('/', addSubject);
+// Public routes (anyone can view)
 router.get('/', getAllSubjects);
-
-// /subject/:id
 router.get('/:id', getSubjectWithTrainers);
+
+// Protected routes (must be logged in)
+// Only admin can add subjects
+router.post('/', protect, authorize('admin'), addSubject);
 
 module.exports = router;
