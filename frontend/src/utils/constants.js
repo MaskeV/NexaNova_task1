@@ -1,4 +1,4 @@
-// src/utils/constants.js
+// frontend/src/utils/constants.js
 
 // API Base URL
 export const API_BASE_URL = 'http://localhost:5000';
@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   // Trainer endpoints
   TRAINERS: '/trainer',
   TRAINER_BY_ID: (id) => `/trainer/${id}`,
+  TRAINER_UPDATE: (id) => `/trainer/${id}`,
   TRAINERS_BY_SUBJECT: (subject) => `/trainer/${subject}/topic`,
   
   // Subject endpoints
@@ -23,6 +24,7 @@ export const API_ENDPOINTS = {
 // Toast Messages
 export const TOAST_MESSAGES = {
   TRAINER_ADDED: 'Trainer added successfully!',
+  TRAINER_UPDATED: 'Trainer updated successfully!',
   TRAINER_DELETED: 'Trainer deleted successfully!',
   TRAINER_ERROR: 'Error with trainer operation',
   SUBJECT_ADDED: 'Subject added successfully!',
@@ -32,6 +34,7 @@ export const TOAST_MESSAGES = {
   AUTH_ERROR: 'Authentication failed',
   REGISTRATION_SUCCESS: 'Registration successful!',
   LOGIN_SUCCESS: 'Login successful!',
+  UNAUTHORIZED: 'You do not have permission to perform this action',
 };
 
 // Form Validation
@@ -43,3 +46,9 @@ export const VALIDATION = {
 
 // Subject Levels
 export const SUBJECT_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+
+// User Roles
+export const USER_ROLES = {
+  ADMIN: 'admin',
+  USER: 'user'
+};

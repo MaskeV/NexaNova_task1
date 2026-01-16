@@ -2,7 +2,7 @@
 import React from 'react';
 import { FaUser, FaEnvelope, FaPhone, FaBriefcase, FaTrash } from 'react-icons/fa';
 
-const TrainerCard = ({ trainer, onDelete }) => {
+const TrainerCard = ({ trainer, onDelete, canDelete = true }) => {
   return (
     <div className="trainer-card card">
       <div className="trainer-card-header">
@@ -47,14 +47,16 @@ const TrainerCard = ({ trainer, onDelete }) => {
         </div>
       </div>
 
-      <div className="trainer-card-footer">
-        <button 
-          className="btn btn-danger btn-sm"
-          onClick={() => onDelete(trainer.empId)}
-        >
-          <FaTrash /> Delete
-        </button>
-      </div>
+      {canDelete && (
+        <div className="trainer-card-footer">
+          <button 
+            className="btn btn-danger btn-sm"
+            onClick={() => onDelete(trainer.empId)}
+          >
+            <FaTrash /> Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 };

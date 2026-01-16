@@ -12,6 +12,7 @@ import Navbar from './components/Layout/Navbar';
 import Dashboard from './components/DashBoard/DashBoard';
 import TrainerList from './components/Trainers/TrainerList';
 import SubjectList from './components/Subjects/SubjectList';
+import MyProfile from './components/Profile/MyProfile';
 
 import './App.css';
 
@@ -50,6 +51,12 @@ function AppContent() {
             <Route path="/subjects" element={
               <PrivateRoute>
                 <SubjectList />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <MyProfile />
               </PrivateRoute>
             } />
             

@@ -4,6 +4,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const trainerRoutes = require('./routes/trainerRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 const { protect } = require('./middlewares/authMiddleware');
 
@@ -23,7 +24,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/auth',
       trainers: '/trainer',
-      subjects: '/subject'
+      subjects: '/subject',
+      profile: '/profile'
     }
   });
 });
@@ -51,9 +53,10 @@ app.get('/test-db', (req, res) => {
 // API Routes
 app.use('/auth', authRoutes);
 
-// Protected routes - require authentication (middleware applied in routes themselves)
+// Protected routes - require authentication
 app.use('/trainer', trainerRoutes);
 app.use('/subject', subjectRoutes);
+app.use('/profile', profileRoutes);
 
 // Error Handling Middleware (must be last)
 app.use(notFound);

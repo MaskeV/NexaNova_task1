@@ -28,6 +28,7 @@ const Navbar = () => {
             <Link to="/" className="nav-link">Dashboard</Link>
             <Link to="/trainers" className="nav-link">Trainers</Link>
             <Link to="/subjects" className="nav-link">Subjects</Link>
+            <Link to="/profile" className="nav-link">My Profile</Link>
           </div>
         )}
 
@@ -37,6 +38,9 @@ const Navbar = () => {
               <div className="user-info">
                 <FaUser />
                 <span>{user?.username}</span>
+                {user?.role === 'admin' && (
+                  <span className="admin-badge">Admin</span>
+                )}
               </div>
               <button onClick={logout} className="btn btn-logout">
                 <FaSignOutAlt /> Logout
