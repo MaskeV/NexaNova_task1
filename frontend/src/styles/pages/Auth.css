@@ -1,4 +1,4 @@
-/* src/styles/pages/Auth.css */
+/* frontend/src/styles/pages/Auth.css */
 /* IMPORTANT: All styles scoped to .auth-page to avoid affecting other pages */
 
 .auth-page {
@@ -151,6 +151,52 @@
   opacity: 0.6;
 }
 
+/* Password Input Wrapper */
+.auth-page .password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-page .password-input-wrapper .form-input {
+  padding-right: 3rem;
+}
+
+.auth-page .password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.auth-page .password-toggle:hover {
+  color: #667eea;
+}
+
+.auth-page .password-toggle:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Forgot Password Link */
+.auth-page .forgot-password-link {
+  text-align: right;
+  margin-top: -0.5rem;
+}
+
+.auth-page .forgot-password-link .auth-link {
+  font-size: 0.9rem;
+}
+
 .auth-page .error-message {
   color: #e74c3c;
   font-size: 0.875rem;
@@ -262,6 +308,10 @@
 
   .auth-page .form-input {
     padding: 0.75rem 0.875rem;
+  }
+
+  .auth-page .password-input-wrapper .form-input {
+    padding-right: 2.75rem;
   }
 
   .auth-page .submit-btn {
