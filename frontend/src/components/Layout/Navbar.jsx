@@ -1,12 +1,20 @@
 // src/components/Layout/Navbar.jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import '../../styles/components/Navbar.css';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // Hide navbar on auth pages
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  
+  if (isAuthPage) {
+    return null;
+  }
 
   return (
     <nav className="navbar">

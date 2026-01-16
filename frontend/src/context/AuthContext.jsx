@@ -1,7 +1,8 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import * as authService from '../services/authService';
+import api from '../services/api';
+import { API_ENDPOINTS } from '../utils/constants';
 
 const AuthContext = createContext(null);
 
@@ -26,64 +27,72 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const userData = await authService.getCurrentUser();
-        setUser(userData.data);
+        const response = await api.get(API_ENDPOINTS.ME);
+        setUser(response.data.data);
       } catch (error) {
+        console.error('Auth check failed:', error);
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setUser(null);
       }
     }
     setLoading(false);
   };
 
-  const login = async (credentials) => {
+  const register = async (userData) => {
     try {
-      const response = await authService.login(credentials);
-      localStorage.setItem('token', response.token);
-      setUser(response.data);
-      toast.success('Login successful!');
-      // Redirect using window.location instead of useNavigate
-      window.location.href = '/';
-      return response;
+      const response = await api.post(API_ENDPOINTS.REGISTER, userData);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data));
+        setUser(response.data.data);
+        toast.success('Registration successful! Welcome to NexaNova!');
+        
+        // Navigate after a short delay to show the toast
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      }
+      
+      return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(errorMessage);
       throw error;
     }
   };
 
-  const register = async (userData) => {
+  const login = async (credentials) => {
     try {
-      const response = await authService.register(userData);
-      localStorage.setItem('token', response.token);
-      setUser(response.data);
-      toast.success('Registration successful!');
-      // Redirect using window.location instead of useNavigate
-      window.location.href = '/';
-      return response;
+      const response = await api.post(API_ENDPOINTS.LOGIN, credentials);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data));
+        setUser(response.data.data);
+        toast.success('Login successful! Welcome back!');
+        
+        // Navigate after a short delay to show the toast
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      }
+      
+      return response.data;
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      toast.error(errorMessage);
       throw error;
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
-    toast.success('Logged out successfully');
-    // Redirect using window.location instead of useNavigate
+    toast.success('Logged out successfully!');
     window.location.href = '/login';
-  };
-
-  const updatePassword = async (passwords) => {
-    try {
-      const response = await authService.updatePassword(passwords);
-      localStorage.setItem('token', response.token);
-      toast.success('Password updated successfully');
-      return response;
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Password update failed');
-      throw error;
-    }
   };
 
   const value = {
@@ -92,7 +101,6 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updatePassword,
     isAuthenticated: !!user
   };
 

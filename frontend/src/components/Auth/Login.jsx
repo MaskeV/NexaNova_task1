@@ -1,13 +1,14 @@
 // src/components/Auth/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../../services/authService';
-import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 import { VALIDATION } from '../../utils/constants';
 import '../../styles/pages/Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -51,7 +52,6 @@ const Login = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix all errors');
       return;
     }
 
@@ -64,69 +64,84 @@ const Login = () => {
       };
 
       await login(credentials);
-      
-      toast.success('Login successful! Welcome back!');
-      navigate('/');
+      // Navigation is handled by AuthContext
     } catch (error) {
       console.error('Login error:', error);
-      
-      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card card">
-        <div className="auth-header">
-          <h1>Welcome Back</h1>
-          <p>Login to your NexaNova account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              className={`form-control ${errors.email ? 'error' : ''}`}
-              placeholder="john@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-            {errors.email && <span className="error-text">{errors.email}</span>}
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-card-header">
+            <h1>Welcome Back</h1>
+            <p>Sign in to your NexaNova account</p>
           </div>
 
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              className={`form-control ${errors.password ? 'error' : ''}`}
-              placeholder="Enter password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            {errors.password && <span className="error-text">{errors.password}</span>}
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                className={`form-input ${errors.email ? 'error' : ''}`}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                disabled={loading}
+              />
+              {errors.email && (
+                <span className="error-message">{errors.email}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                className={`form-input ${errors.password ? 'error' : ''}`}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                disabled={loading}
+              />
+              {errors.password && (
+                <span className="error-message">{errors.password}</span>
+              )}
+            </div>
+
+            <button 
+              type="submit" 
+              className="submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-footer">
+            <p>
+              Don't have an account?{' '}
+              <Link to="/register" className="auth-link">
+                Create one here
+              </Link>
+            </p>
           </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary btn-block"
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <div className="auth-footer">
-          <p>
-            Don't have an account? <Link to="/register">Sign up here</Link>
-          </p>
         </div>
       </div>
     </div>

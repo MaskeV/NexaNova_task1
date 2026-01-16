@@ -1,15 +1,16 @@
 // src/components/Auth/Register.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../../services/authService';
-import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 import { VALIDATION } from '../../utils/constants';
 import '../../styles/pages/Auth.css';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  
   const [formData, setFormData] = useState({
-    username: '',      // changed from 'name' to 'username'
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -72,7 +73,6 @@ const Register = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix all errors');
       return;
     }
 
@@ -80,20 +80,15 @@ const Register = () => {
       setLoading(true);
 
       const userData = {
-        username: formData.username.trim(),  // changed here
+        username: formData.username.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password
       };
 
       await register(userData);
-      
-      toast.success('Registration successful! Welcome!');
-      navigate('/');
+      // Navigation is handled by AuthContext
     } catch (error) {
       console.error('Registration error:', error);
-      
-      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-      toast.error(errorMessage);
       
       // Set specific field errors if provided
       if (error.response?.data?.errors) {
@@ -105,84 +100,114 @@ const Register = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card card">
-        <div className="auth-header">
-          <h1>Create Account</h1>
-          <p>Sign up for NexaNova</p>
-        </div>
-
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="form-group">
-            <label>Username</label>
-            <input
-              type="text"
-              name="username"
-              className={`form-control ${errors.username ? 'error' : ''}`}
-              placeholder="JohnDoe"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
-            {errors.username && <span className="error-text">{errors.username}</span>}
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="auth-card-header">
+            <h1>Create Your Account</h1>
+            <p>Join NexaNova and start managing trainers</p>
           </div>
 
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              className={`form-control ${errors.email ? 'error' : ''}`}
-              placeholder="john@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-            {errors.email && <span className="error-text">{errors.email}</span>}
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                className={`form-input ${errors.username ? 'error' : ''}`}
+                placeholder="Enter your username"
+                value={formData.username}
+                onChange={handleChange}
+                autoComplete="username"
+                disabled={loading}
+              />
+              {errors.username && (
+                <span className="error-message">{errors.username}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                className={`form-input ${errors.email ? 'error' : ''}`}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                disabled={loading}
+              />
+              {errors.email && (
+                <span className="error-message">{errors.email}</span>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                className={`form-input ${errors.password ? 'error' : ''}`}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="new-password"
+                disabled={loading}
+              />
+              {errors.password && (
+                <span className="error-message">{errors.password}</span>
+              )}
+              <small className="input-hint">
+                Minimum {VALIDATION.PASSWORD_MIN_LENGTH} characters
+              </small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                name="confirmPassword"
+                className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                autoComplete="new-password"
+                disabled={loading}
+              />
+              {errors.confirmPassword && (
+                <span className="error-message">{errors.confirmPassword}</span>
+              )}
+            </div>
+
+            <button 
+              type="submit" 
+              className="submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </button>
+          </form>
+
+          <div className="auth-footer">
+            <p>
+              Already have an account?{' '}
+              <Link to="/login" className="auth-link">
+                Sign in here
+              </Link>
+            </p>
           </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              className={`form-control ${errors.password ? 'error' : ''}`}
-              placeholder="Enter password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            {errors.password && <span className="error-text">{errors.password}</span>}
-            <small>Minimum {VALIDATION.PASSWORD_MIN_LENGTH} characters</small>
-          </div>
-
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              className={`form-control ${errors.confirmPassword ? 'error' : ''}`}
-              placeholder="Confirm password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
-            {errors.confirmPassword && <span className="error-text">{errors.confirmPassword}</span>}
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary btn-block"
-            disabled={loading}
-          >
-            {loading ? 'Creating Account...' : 'Sign Up'}
-          </button>
-        </form>
-
-        <div className="auth-footer">
-          <p>
-            Already have an account? <Link to="/login">Login here</Link>
-          </p>
         </div>
       </div>
     </div>

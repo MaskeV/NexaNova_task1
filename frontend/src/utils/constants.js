@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
   // Auth endpoints
   REGISTER: '/auth/register',
   LOGIN: '/auth/login',
+  ME: '/auth/me',
   
   // Trainer endpoints
   TRAINERS: '/trainer',
