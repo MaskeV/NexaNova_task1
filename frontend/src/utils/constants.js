@@ -19,7 +19,12 @@ export const API_ENDPOINTS = {
   // Subject endpoints
   SUBJECTS: '/subject',
   SUBJECT_BY_ID: (id) => `/subject/${id}`,
+
+    PROFILE: '/api/profile',
+  PROFILE_ME: '/api/profile/me',
 };
+
+
 
 // Toast Messages
 export const TOAST_MESSAGES = {
@@ -35,6 +40,13 @@ export const TOAST_MESSAGES = {
   REGISTRATION_SUCCESS: 'Registration successful!',
   LOGIN_SUCCESS: 'Login successful!',
   UNAUTHORIZED: 'You do not have permission to perform this action',
+ 
+   // Add profile messages
+  PROFILE_CREATED: 'Profile created successfully!',
+  PROFILE_UPDATED: 'Profile updated successfully!',
+  PROFILE_DELETED: 'Profile deleted successfully!',
+  PROFILE_NOT_FOUND: 'No profile found. Please create one.',
+
 };
 
 // Form Validation

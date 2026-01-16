@@ -1,18 +1,45 @@
-// backend/src/controllers/profileController.js
 const Trainer = require('../models/Trainer');
 const Subject = require('../models/Subject');
 const User = require('../models/user');
 
+// Helper function to generate empId
+const generateEmpId = async () => {
+  try {
+    // Find the highest empId
+    const lastTrainer = await Trainer.findOne().sort({ empId: -1 });
+    
+    let nextNum = 1;
+    if (lastTrainer && lastTrainer.empId) {
+      const match = lastTrainer.empId.match(/EMP(\d+)/);
+      if (match) {
+        nextNum = parseInt(match[1]) + 1;
+      }
+    }
+    
+    return `EMP${String(nextNum).padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error generating empId:', error);
+    return 'EMP001'; // Fallback
+  }
+};
+
 // @desc    Get my trainer profile
-// @route   GET /profile
+// @route   GET /profile/me
 const getMyProfile = async (req, res) => {
   try {
-    const trainer = await Trainer.findOne({ createdBy: req.user._id });
+    // Try to find by user ID first (createdBy)
+    let trainer = await Trainer.findOne({ createdBy: req.user._id });
+    
+    // If not found, try to find by email (for backward compatibility)
+    if (!trainer && req.user.email) {
+      trainer = await Trainer.findOne({ email: req.user.email });
+    }
 
     if (!trainer) {
       return res.status(404).json({
         success: false,
-        message: 'Trainer profile not found'
+        message: 'Trainer profile not found',
+        code: 'PROFILE_NOT_FOUND'
       });
     }
 
@@ -21,9 +48,10 @@ const getMyProfile = async (req, res) => {
       data: trainer
     });
   } catch (error) {
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Server error: ' + error.message
     });
   }
 };
@@ -32,42 +60,55 @@ const getMyProfile = async (req, res) => {
 // @route   POST /profile
 const createMyProfile = async (req, res) => {
   try {
-    const { empId, name, email, phone, subjects, experience } = req.body;
+    const { name, phone, subjects, experience } = req.body;
+    
+    // Get user email from auth (should not come from request body)
+    const userEmail = req.user.email;
+    
+    if (!userEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'User email not found in authentication'
+      });
+    }
 
     // Check if user already has a trainer profile
-    const existingProfile = await Trainer.findOne({ createdBy: req.user._id });
-    if (existingProfile) {
+    const existingByUser = await Trainer.findOne({ createdBy: req.user._id });
+    if (existingByUser) {
       return res.status(400).json({
         success: false,
         message: 'You already have a trainer profile. Use update instead.'
       });
     }
 
-    // Check if empId or email already exists
-    const existingTrainer = await Trainer.findOne({ $or: [{ empId }, { email }] });
-    if (existingTrainer) {
+    // Check if email already exists in trainer profiles
+    const existingByEmail = await Trainer.findOne({ email: userEmail });
+    if (existingByEmail) {
       return res.status(400).json({ 
         success: false,
-        message: 'Trainer with this Employee ID or Email already exists' 
+        message: 'Trainer profile with this email already exists' 
       });
     }
+
+    // Generate empId automatically
+    const empId = await generateEmpId();
 
     // Create new trainer profile
     const trainer = await Trainer.create({
       empId,
-      name,
-      email,
+      name: name || req.user.name || req.user.username,
+      email: userEmail, // Use email from auth, NOT from request body
       phone,
-      subjects,
-      experience,
+      subjects: subjects || [],
+      experience: experience || 0,
       createdBy: req.user._id
     });
 
     // Update subjects with this trainer's empId
-    if (subjects && subjects.length > 0) {
+    if (trainer.subjects && trainer.subjects.length > 0) {
       await Subject.updateMany(
-        { subjectId: { $in: subjects } },
-        { $addToSet: { trainers: empId } }
+        { subjectId: { $in: trainer.subjects } },
+        { $addToSet: { trainers: trainer.empId } }
       );
     }
 
@@ -77,6 +118,7 @@ const createMyProfile = async (req, res) => {
       data: trainer
     });
   } catch (error) {
+    console.error('Create profile error:', error);
     res.status(400).json({
       success: false,
       message: error.message
@@ -88,7 +130,7 @@ const createMyProfile = async (req, res) => {
 // @route   PUT /profile
 const updateMyProfile = async (req, res) => {
   try {
-    const { name, email, phone, subjects, experience } = req.body;
+    const { name, phone, subjects, experience } = req.body;
 
     // Find trainer profile by user ID
     const trainer = await Trainer.findOne({ createdBy: req.user._id });
@@ -100,26 +142,11 @@ const updateMyProfile = async (req, res) => {
       });
     }
 
-    // Check if new email conflicts with another trainer
-    if (email && email !== trainer.email) {
-      const emailExists = await Trainer.findOne({ 
-        email, 
-        _id: { $ne: trainer._id } 
-      });
-      if (emailExists) {
-        return res.status(400).json({
-          success: false,
-          message: 'This email is already used by another trainer'
-        });
-      }
-    }
-
     // Store old subjects for cleanup
     const oldSubjects = trainer.subjects || [];
 
-    // Update trainer fields
+    // Update trainer fields (DO NOT update email - it comes from auth)
     if (name) trainer.name = name;
-    if (email) trainer.email = email;
     if (phone !== undefined) trainer.phone = phone;
     if (experience !== undefined) trainer.experience = experience;
     if (subjects !== undefined) trainer.subjects = subjects;
@@ -156,6 +183,7 @@ const updateMyProfile = async (req, res) => {
       data: trainer
     });
   } catch (error) {
+    console.error('Update profile error:', error);
     res.status(400).json({
       success: false,
       message: error.message
@@ -189,6 +217,7 @@ const deleteMyProfile = async (req, res) => {
       message: 'Trainer profile deleted successfully'
     });
   } catch (error) {
+    console.error('Delete profile error:', error);
     res.status(500).json({
       success: false,
       message: error.message

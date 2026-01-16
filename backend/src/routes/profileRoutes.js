@@ -1,4 +1,3 @@
-// backend/src/routes/profileRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -13,7 +12,7 @@ const { protect } = require('../middlewares/authMiddleware');
 router.use(protect);
 
 // My profile routes
-router.get('/', getMyProfile);
+router.get('/me', getMyProfile); // Changed from '/' to '/me'
 router.post('/', createMyProfile);
 router.put('/', updateMyProfile);
 router.delete('/', deleteMyProfile);
