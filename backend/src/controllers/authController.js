@@ -1,5 +1,5 @@
 // src/controllers/authController.js
-const User = require('../models/user');
+const User = require('../models/user'); // Changed from '../models/user' to '../models/User'
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
@@ -65,6 +65,7 @@ const register = async (req, res) => {
       token
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({
       success: false,
       message: error.message

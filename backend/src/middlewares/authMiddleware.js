@@ -1,6 +1,6 @@
 // src/middlewares/authMiddleware.js
 const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+const User = require('../models/user'); // Changed from '../models/user' to '../models/User'
 
 // Protect routes - verify JWT token
 const protect = async (req, res, next) => {

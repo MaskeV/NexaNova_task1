@@ -1,14 +1,15 @@
+
 // src/middlewares/errorHandler.js
 
 // 404 Not Found Handler
-const notFound = (req, res, ) => {
+const notFound = (req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
   res.status(404);
-  (error);
+  next(error);
 };
 
 // Global Error Handler
-const errorHandler = (err, req, res, ) => {
+const errorHandler = (err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   
   res.status(statusCode).json({
