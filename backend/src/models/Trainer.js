@@ -1,4 +1,4 @@
-// src/models/Trainer.js
+// backend/src/models/Trainer.js
 const mongoose = require('mongoose');
 
 const trainerSchema = new mongoose.Schema({
@@ -36,6 +36,10 @@ const trainerSchema = new mongoose.Schema({
   joiningDate: {
     type: Date,
     default: Date.now
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true
@@ -44,5 +48,6 @@ const trainerSchema = new mongoose.Schema({
 // Index for faster queries
 trainerSchema.index({ empId: 1 });
 trainerSchema.index({ subjects: 1 });
+trainerSchema.index({ email: 1 });
 
 module.exports = mongoose.model('Trainer', trainerSchema);
