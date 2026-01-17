@@ -141,6 +141,14 @@ const MyProfile = () => {
       ...formData,
       subjects: currentSubjects
     });
+    
+    // Clear subjects error when user selects at least one
+    if (currentSubjects.length > 0 && errors.subjects) {
+      setErrors({
+        ...errors,
+        subjects: ''
+      });
+    }
   };
 
   const handleSelectAll = () => {
@@ -149,6 +157,14 @@ const MyProfile = () => {
       ...formData,
       subjects: allSubjectIds
     });
+    
+    // Clear subjects error
+    if (errors.subjects) {
+      setErrors({
+        ...errors,
+        subjects: ''
+      });
+    }
   };
 
   const handleClearAll = () => {
@@ -193,11 +209,18 @@ const MyProfile = () => {
       newErrors.phone = 'Phone number must start with 6, 7, 8, or 9';
     }
 
-    // Experience validation
-    if (formData.experience && formData.experience !== '') {
+    // Subjects validation - AT LEAST ONE REQUIRED
+    if (!formData.subjects || formData.subjects.length === 0) {
+      newErrors.subjects = 'Please select at least one subject';
+    }
+
+    // Experience validation - CANNOT BE 0
+    if (!formData.experience || formData.experience === '' || formData.experience === '0') {
+      newErrors.experience = 'Experience is required and must be greater than 0';
+    } else {
       const exp = parseInt(formData.experience);
-      if (isNaN(exp) || exp < 0) {
-        newErrors.experience = 'Experience must be a positive number';
+      if (isNaN(exp) || exp <= 0) {
+        newErrors.experience = 'Experience must be a positive number greater than 0';
       } else if (exp > 50) {
         newErrors.experience = 'Experience cannot exceed 50 years';
       }
@@ -437,29 +460,30 @@ const MyProfile = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Experience (years)</label>
+                  <label>Experience (years) *</label>
                   <input
                     type="number"
                     name="experience"
                     className={`form-control ${errors.experience ? 'error' : ''}`}
-                    placeholder="0"
-                    min="0"
+                    placeholder="Enter years of experience (minimum 1)"
+                    min="1"
                     max="50"
                     value={formData.experience || ''}
                     onChange={handleChange}
                     disabled={saving}
+                    required
                   />
                   {errors.experience && <span className="error-text">{errors.experience}</span>}
-                  <small className="form-text">Years of experience (0-50)</small>
+                  <small className="form-text required-field">* Experience must be at least 1 year (1-50)</small>
                 </div>
               </div>
             </div>
 
             <div className="form-section">
-              <h3>Subjects</h3>
+              <h3>Subjects *</h3>
               
               <div className="form-group" ref={dropdownRef}>
-                <label>Select Subjects</label>
+                <label>Select Subjects (Required - At least one)</label>
                 {loadingSubjects ? (
                   <div className="loading-subjects">Loading subjects...</div>
                 ) : (availableSubjects || []).length === 0 ? (
@@ -469,12 +493,12 @@ const MyProfile = () => {
                 ) : (
                   <>
                     <div 
-                      className={`custom-dropdown ${dropdownOpen ? 'open' : ''}`}
+                      className={`custom-dropdown ${errors.subjects ? 'error' : ''} ${dropdownOpen ? 'open' : ''}`}
                       onClick={toggleDropdown}
                     >
                       <div className="dropdown-selected">
                         {(formData.subjects || []).length === 0 
-                          ? <span className="placeholder">Click to select subjects (optional)</span>
+                          ? <span className="placeholder">Click to select subjects (required)</span>
                           : <span className="selected-count">{(formData.subjects || []).length} subject(s) selected</span>
                         }
                         <span className={`dropdown-arrow ${dropdownOpen ? 'up' : 'down'}`}>
@@ -535,7 +559,8 @@ const MyProfile = () => {
                         </div>
                       )}
                     </div>
-                    <small className="form-text">Select the subjects you can teach</small>
+                    {errors.subjects && <span className="error-text">{errors.subjects}</span>}
+                    <small className="form-text required-field">* At least one subject is required</small>
                   </>
                 )}
               </div>

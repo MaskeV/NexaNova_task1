@@ -401,3 +401,86 @@
     max-height: 60vh;
   }
 }
+
+.form-text.required-field {
+  color: #e74c3c;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Form section headers */
+.form-section h3 {
+  color: #1e3c72;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+/* Error state for custom dropdown */
+.custom-dropdown.error {
+  border-color: #e74c3c;
+  background-color: #fff5f5;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Enhanced error text */
+.error-text {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  background: #fff5f5;
+  border-left: 3px solid #e74c3c;
+  border-radius: 4px;
+  animation: slideInLeft 0.3s ease;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Input validation styles */
+.form-control.error {
+  border-color: #e74c3c;
+  background-color: #fff5f5;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.form-control.error:focus {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.15);
+}
+
+/* Success state (optional) */
+.form-control.success {
+  border-color: #4caf50;
+  background-color: #f1f8f4;
+}
+
+/* Visual feedback for required fields */
+label::after {
+  content: ' *';
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Hide asterisk for optional fields - add class 'optional' to those labels */
+label.optional::after {
+  content: '';
+}
