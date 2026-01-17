@@ -1,11 +1,11 @@
 # Backend API Documentation
 
-## 📍 Base URL
+## Base URL
 ```
-http://localhost:5000/
+http://localhost:5000/api
 ```
 
-## 🔐 Authentication
+## Authentication
 Most endpoints require JWT token in the Authorization header:
 
 ```
@@ -14,7 +14,7 @@ Authorization: Bearer <your_jwt_token>
 
 ---
 
-## 📋 API Endpoints Summary
+## API Endpoints Summary
 
 ### Authentication
 | Method | Endpoint | Description |
@@ -44,9 +44,9 @@ Authorization: Bearer <your_jwt_token>
 
 ---
 
-## 📝 Detailed API Reference
+## Detailed API Reference
 
-### 🔐 Authentication
+### Authentication
 
 #### 1. Login
 ```http
@@ -89,7 +89,7 @@ Content-Type: application/json
 
 ---
 
-### 📚 Subjects
+### Subjects
 
 #### 1. Get All Subjects
 ```http
@@ -206,7 +206,7 @@ Authorization: Bearer <token>
 
 ---
 
-### 👨‍🏫 Trainers
+### Trainers
 
 #### 1. Get All Trainers
 ```http
@@ -279,7 +279,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 🔧 Error Responses
+## Error Responses
 
 All errors follow this format:
 
@@ -305,7 +305,7 @@ All errors follow this format:
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 ### Subjects Collection
 ```javascript
@@ -354,7 +354,7 @@ All errors follow this format:
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 Create a `.env` file in the backend root:
 
@@ -385,7 +385,7 @@ CORS_ORIGIN=http://localhost:3000
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Installation
 ```bash
@@ -410,7 +410,7 @@ npm start
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 backend/
@@ -441,7 +441,7 @@ backend/
 
 ---
 
-## 📞 Support
+## Support
 
 For issues or questions, please contact the development team or create an issue in the project repository.
 
