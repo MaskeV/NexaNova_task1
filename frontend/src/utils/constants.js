@@ -1,7 +1,7 @@
 // frontend/src/utils/constants.js
 
 // API Base URL
-export const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = 'https://nexanova-task1-backend.onrender.com/';
 
 // API Endpoints
 export const API_ENDPOINTS = {
