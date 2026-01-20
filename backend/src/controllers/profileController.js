@@ -1,6 +1,6 @@
 const Trainer = require('../models/Trainer');
 const Subject = require('../models/Subject');
-const User = require('../models/user');
+const User = require('../models/User');
 
 // Helper function to generate empId
 const generateEmpId = async () => {

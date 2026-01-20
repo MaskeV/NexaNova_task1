@@ -1,5 +1,5 @@
 // src/controllers/authController.js
-const User = require('../models/user'); // Changed from '../models/user' to '../models/User'
+const User = require('../models/User'); // Changed from '../models/user' to '../models/User'
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
