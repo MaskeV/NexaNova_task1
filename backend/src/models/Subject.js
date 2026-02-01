@@ -7,24 +7,47 @@ const subjectSchema = new mongoose.Schema({
     required: [true, 'Subject ID is required'],
     unique: true,
     trim: true,
-    uppercase: true
+    uppercase: true,
+    validate: {
+      validator: function(v) {
+        return /^SB\d{2}$/.test(v);
+      },
+      message: 'Subject ID must be in format SB01, SB02, etc.'
+    }
   },
   name: {
     type: String,
     required: [true, 'Subject name is required'],
-    trim: true
+    trim: true,
+    minlength: [3, 'Subject name must be at least 3 characters long'],
+    maxlength: [100, 'Subject name cannot exceed 100 characters']
   },
   description: {
     type: String,
-    trim: true
+    required: [true, 'Description is required'],
+    trim: true,
+    minlength: [10, 'Description must be at least 10 characters long'],
+    maxlength: [500, 'Description cannot exceed 500 characters']
   },
   duration: {
     type: Number,
-    min: 0
+    required: [true, 'Duration is required'],
+    min: [1, 'Duration must be at least 1 hour'],
+    max: [1000, 'Duration cannot exceed 1000 hours'],
+    validate: {
+      validator: function(v) {
+        return Number.isInteger(v);
+      },
+      message: 'Duration must be a whole number'
+    }
   },
   level: {
     type: String,
-    enum: ['Beginner', 'Intermediate', 'Advanced'],
+    required: [true, 'Level is required'],
+    enum: {
+      values: ['Beginner', 'Intermediate', 'Advanced'],
+      message: 'Level must be either Beginner, Intermediate, or Advanced'
+    },
     default: 'Beginner'
   },
   trainers: [{
@@ -35,8 +58,7 @@ const subjectSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-subjectSchema.index({ subjectId: 1 });
+// Index for faster queries - subjectId already indexed via unique: true
 subjectSchema.index({ name: 1 });
 
 module.exports = mongoose.model('Subject', subjectSchema);

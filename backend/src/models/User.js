@@ -60,7 +60,6 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 };
 
 // Index for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+
 
 module.exports = mongoose.model('User', userSchema);
