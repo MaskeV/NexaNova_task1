@@ -56,7 +56,7 @@ const TrainerList = () => {
   const handleTrainerAdded = () => {
     setShowAddForm(false);
     fetchTrainers();
-    toast.success('Trainer added successfully!');
+    
   };
 
   const canEditTrainer = (trainer) => {

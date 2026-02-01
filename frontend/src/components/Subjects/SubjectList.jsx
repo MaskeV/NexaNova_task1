@@ -1,5 +1,5 @@
 // src/components/Subjects/SubjectList.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getAllSubjects, deleteSubject } from '../../services/subjectService';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -15,13 +15,29 @@ const SubjectList = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
+  const formRef = useRef(null);
 
-  // Check if user is admin
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchSubjects();
   }, []);
+
+  // Scroll to form when it opens
+  useEffect(() => {
+    if ((showAddForm || editingSubject) && formRef.current) {
+      // Small delay to ensure form is rendered
+      setTimeout(() => {
+        formRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+        // Extra scroll to account for fixed navbar
+        window.scrollBy({ top: -20, behavior: 'smooth' });
+      }, 100);
+    }
+  }, [showAddForm, editingSubject]);
 
   const fetchSubjects = async () => {
     try {
@@ -48,12 +64,18 @@ const SubjectList = () => {
   };
 
   const handleEdit = (subject) => {
-    setEditingSubject(subject);
+    // Close add form if open
     setShowAddForm(false);
+    // Set editing subject (this will trigger scroll in useEffect)
+    setEditingSubject(subject);
   };
 
   const handleCancelEdit = () => {
     setEditingSubject(null);
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddForm(false);
   };
 
   const handleDelete = async (subjectId) => {
@@ -75,45 +97,57 @@ const SubjectList = () => {
     }
   };
 
+  const handleAddNew = () => {
+    // Close edit form if open
+    setEditingSubject(null);
+    // Toggle add form
+    setShowAddForm(!showAddForm);
+  };
+
   if (loading) return <Loading message="Loading subjects..." />;
 
   return (
     <div className="subject-list-container">
       <div className="page-header">
-        <h1>Subjects ({subjects.length})</h1>
-        {isAdmin && !editingSubject && (
+        <div>
+          <h1>Subjects ({subjects.length})</h1>
+          {!isAdmin && (
+            <p className="user-notice">
+              ℹ️ Only administrators can add, edit, or delete subjects. View available subjects below.
+            </p>
+          )}
+        </div>
+        {isAdmin && (
           <button 
-            className="btn btn-primary" 
-            onClick={() => {
-              setShowAddForm(!showAddForm);
-              setEditingSubject(null);
-            }}
+            className={`btn ${showAddForm ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={handleAddNew}
           >
-            {showAddForm ? 'Cancel' : '+ Add Subject'}
+            {showAddForm ? '✕ Cancel' : '+ Add Subject'}
           </button>
         )}
       </div>
 
-      {!isAdmin && (
-        <div className="info-banner">
-          <p>ℹ️ Only administrators can add, edit, or delete subjects. View available subjects below.</p>
-        </div>
-      )}
+      {/* Form section with ref for scrolling */}
+      <div ref={formRef}>
+        {showAddForm && isAdmin && !editingSubject && (
+          <div className="form-container-wrapper">
+            <AddSubject 
+              onSuccess={handleSubjectAdded}
+              onCancel={handleCancelAdd}
+            />
+          </div>
+        )}
 
-      {showAddForm && isAdmin && !editingSubject && (
-        <AddSubject 
-          onSuccess={handleSubjectAdded}
-          onCancel={() => setShowAddForm(false)}
-        />
-      )}
-
-      {editingSubject && isAdmin && (
-        <EditSubject
-          subject={editingSubject}
-          onSuccess={handleSubjectUpdated}
-          onCancel={handleCancelEdit}
-        />
-      )}
+        {editingSubject && isAdmin && (
+          <div className="form-container-wrapper">
+            <EditSubject
+              subject={editingSubject}
+              onSuccess={handleSubjectUpdated}
+              onCancel={handleCancelEdit}
+            />
+          </div>
+        )}
+      </div>
 
       {subjects.length === 0 ? (
         <div className="empty-state">
@@ -134,6 +168,31 @@ const SubjectList = () => {
           ))}
         </div>
       )}
+
+      <style jsx>{`
+        .form-container-wrapper {
+          margin-bottom: 2rem;
+          animation: slideDown 0.3s ease-out;
+          scroll-margin-top: 80px; /* Account for fixed navbar */
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .user-notice {
+          color: #666;
+          font-size: 0.9rem;
+          margin-top: 0.5rem;
+        }
+      `}</style>
     </div>
   );
 };

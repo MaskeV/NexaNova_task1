@@ -7,6 +7,16 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
   const [showTrainers, setShowTrainers] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  // Truncate description to specified length
+  const truncateText = (text, maxLength) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  const shouldShowReadMore = subject.description && subject.description.length > 100;
 
   const getLevelColor = (level) => {
     switch (level) {
@@ -49,7 +59,30 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
 
       <div className="subject-card-body">
         {subject.description && (
-          <p className="subject-description">{subject.description}</p>
+          <div className="subject-description-container">
+            <p className="subject-description">
+              {isDescriptionExpanded 
+                ? subject.description 
+                : truncateText(subject.description, 100)
+              }
+            </p>
+            {shouldShowReadMore && (
+              <button 
+                className="read-more-btn"
+                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+              >
+                {isDescriptionExpanded ? (
+                  <>
+                    <FaChevronUp size={12} /> Show less
+                  </>
+                ) : (
+                  <>
+                    <FaChevronDown size={12} /> Read more
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         )}
 
         <div className="subject-details">
@@ -120,6 +153,45 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
           )}
         </div>
       )}
+
+      <style jsx>{`
+        .subject-description-container {
+          margin-bottom: 1rem;
+        }
+
+        .subject-description {
+          color: #666;
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 0 0 0.5rem 0;
+          word-break: break-word;
+        }
+
+        .read-more-btn {
+          background: none;
+          border: none;
+          color: #667eea;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.25rem 0;
+          transition: all 0.2s ease;
+        }
+
+        .read-more-btn:hover {
+          color: #764ba2;
+          gap: 0.5rem;
+        }
+
+        .read-more-btn:focus {
+          outline: 2px solid #667eea;
+          outline-offset: 2px;
+          border-radius: 4px;
+        }
+      `}</style>
     </div>
   );
 };

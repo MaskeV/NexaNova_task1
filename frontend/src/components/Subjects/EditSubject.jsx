@@ -4,8 +4,10 @@ import { updateSubject } from '../../services/subjectService';
 import { getAllTrainers } from '../../services/trainerService';
 import { SUBJECT_LEVELS } from '../../utils/constants';
 import { toast } from 'react-toastify';
+import MultiSelectDropdown from '../Common/MultiSelectDropdown';
 
 const EditSubject = ({ subject, onSuccess, onCancel }) => {
+  const formRef = useRef(null);
   const [formData, setFormData] = useState({
     name: subject.name || '',
     description: subject.description || '',
@@ -17,26 +19,40 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
   const [errors, setErrors] = useState({});
   const [availableTrainers, setAvailableTrainers] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  const dropdownRef = useRef(null);
+
+  // Scroll to top when component mounts (edit form opens)
+  useEffect(() => {
+    // Multiple scroll strategies for better compatibility
+    const scrollToTop = () => {
+      // Strategy 1: Scroll to form element
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+      
+      // Strategy 2: Scroll window to top
+      window.scrollTo({ 
+        top: 0, 
+        left: 0,
+        behavior: 'smooth' 
+      });
+      
+      // Strategy 3: Scroll document body
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    // Execute scroll with slight delay to ensure DOM is ready
+    const timer = setTimeout(scrollToTop, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     fetchAvailableTrainers();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, []);
 
   const fetchAvailableTrainers = async () => {
@@ -68,15 +84,10 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
     }
   };
 
-  const toggleTrainer = (empId) => {
-    const isSelected = formData.trainers.includes(empId);
-    const newTrainers = isSelected
-      ? formData.trainers.filter(id => id !== empId)
-      : [...formData.trainers, empId];
-    
+  const handleTrainersChange = (selectedTrainers) => {
     setFormData({
       ...formData,
-      trainers: newTrainers
+      trainers: selectedTrainers
     });
     
     if (errors.trainers) {
@@ -87,67 +98,10 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
     }
   };
 
-  const removeTrainer = (empId) => {
-    setFormData({
-      ...formData,
-      trainers: formData.trainers.filter(id => id !== empId)
-    });
-  };
-
-  const handleSelectAll = () => {
-    const allTrainerIds = availableTrainers.map(t => t.empId);
-    setFormData({
-      ...formData,
-      trainers: allTrainerIds
-    });
-  };
-
-  const handleClearAll = () => {
-    setFormData({
-      ...formData,
-      trainers: []
-    });
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Validate Name
-    if (!formData.name || formData.name.trim() === '') {
-      newErrors.name = 'Subject name is required';
-    } else if (formData.name.trim().length < 3) {
-      newErrors.name = 'Subject name must be at least 3 characters';
-    } else if (formData.name.trim().length > 100) {
-      newErrors.name = 'Subject name must be at most 100 characters';
-    }
-
-    // Validate Duration
-    if (formData.duration && formData.duration !== '') {
-      const dur = parseInt(formData.duration);
-      if (isNaN(dur) || dur < 0) {
-        newErrors.duration = 'Duration must be a positive number';
-      } else if (dur > 1000) {
-        newErrors.duration = 'Duration cannot exceed 1000 hours';
-      }
-    }
-
-    // Validate Description
-    if (formData.description && formData.description.length > 500) {
-      newErrors.description = 'Description must be at most 500 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const isValid = validateForm();
-    if (!isValid) {
-      toast.error('Please fix all errors before submitting');
-      return;
-    }
+    setErrors({});
 
     try {
       setLoading(true);
@@ -160,21 +114,43 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
         trainers: formData.trainers
       };
 
+      console.log('📤 Updating subject:', subject.subjectId, subjectData);
+
       await updateSubject(subject.subjectId, subjectData);
       toast.success('Subject updated successfully!');
       onSuccess();
     } catch (error) {
+      console.error('❌ Update subject error:', error);
+      
+      const backendErrors = error.response?.data?.errors || {};
       const errorMessage = error.response?.data?.message || 'Failed to update subject';
-      toast.error(errorMessage);
-      console.error(error);
+      
+      if (Object.keys(backendErrors).length > 0) {
+        setErrors(backendErrors);
+        const firstError = Object.values(backendErrors)[0];
+        toast.error(firstError);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Transform trainers for dropdown
+  const trainerOptions = availableTrainers.map(trainer => ({
+    id: trainer.empId,
+    name: trainer.name,
+    extra: `${trainer.experience} years experience`
+  }));
+
   return (
-    <div className="edit-subject-form card">
-      <h2>Edit Subject - {subject.subjectId}</h2>
+    <div ref={formRef} className="edit-subject-form card">
+      <div className="form-header">
+        <h2>✏️ Edit Subject - {subject.subjectId}</h2>
+        <p className="form-subtitle">Update the subject details below</p>
+      </div>
+
       <form onSubmit={handleSubmit} noValidate>
         <div className="form-row">
           <div className="form-group">
@@ -187,7 +163,7 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
               disabled
               style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
             />
-            <small>Cannot be changed</small>
+            <small className="input-hint">Cannot be changed</small>
           </div>
 
           <div className="form-group">
@@ -202,47 +178,52 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
               required
             />
             {errors.name && <span className="error-text">{errors.name}</span>}
-            <small>3-100 characters</small>
+            <small className="input-hint">3-100 characters</small>
           </div>
         </div>
 
         <div className="form-group">
-          <label>Description</label>
+          <label>Description *</label>
           <textarea
             name="description"
             className={`form-control ${errors.description ? 'error' : ''}`}
             placeholder="Learn React from scratch..."
-            rows="3"
+            rows="4"
             value={formData.description}
             onChange={handleChange}
             maxLength="500"
+            required
           />
           {errors.description && <span className="error-text">{errors.description}</span>}
-          <small>Maximum 500 characters ({formData.description.length}/500)</small>
+          <small className="char-counter">
+            {formData.description.length}/500 characters
+            {formData.description.length < 10 && <span className="warning"> (minimum 10 required)</span>}
+          </small>
         </div>
 
         <div className="form-row">
           <div className="form-group">
-            <label>Duration (hours)</label>
+            <label>Duration (hours) *</label>
             <input
               type="number"
               name="duration"
               className={`form-control ${errors.duration ? 'error' : ''}`}
               placeholder="60"
-              min="0"
+              min="1"
               max="1000"
               value={formData.duration}
               onChange={handleChange}
+              required
             />
             {errors.duration && <span className="error-text">{errors.duration}</span>}
-            <small>0 to 1000 hours</small>
+            <small className="input-hint">1-1000 hours</small>
           </div>
 
           <div className="form-group">
             <label>Level *</label>
             <select
               name="level"
-              className="form-control"
+              className={`form-control ${errors.level ? 'error' : ''}`}
               value={formData.level}
               onChange={handleChange}
             >
@@ -252,313 +233,138 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
                 </option>
               ))}
             </select>
-            <small>Choose difficulty level</small>
+            {errors.level && <span className="error-text">{errors.level}</span>}
           </div>
         </div>
 
         <div className="form-group">
-          <label>Assign Trainers (optional)</label>
           {loadingTrainers ? (
-            <div className="loading-trainers">Loading trainers...</div>
-          ) : availableTrainers.length === 0 ? (
-            <div className="no-trainers-info">
-              <p>ℹ️ No trainers available yet.</p>
-              <small>You can add trainers later.</small>
+            <div className="loading-state">
+              <div className="spinner-small"></div>
+              <span>Loading trainers...</span>
             </div>
           ) : (
-            <div className="custom-dropdown" ref={dropdownRef}>
-              <div 
-                className={`dropdown-trigger ${isDropdownOpen ? 'open' : ''} ${errors.trainers ? 'error' : ''}`}
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              >
-                <span>
-                  {formData.trainers.length > 0 
-                    ? `${formData.trainers.length} trainer(s) selected` 
-                    : 'Select trainers...'}
-                </span>
-                <span className="dropdown-arrow">{isDropdownOpen ? '▲' : '▼'}</span>
-              </div>
-              
-              {isDropdownOpen && (
-                <div className="dropdown-menu">
-                  <div className="dropdown-header">
-                    <div className="dropdown-title">Select Trainers</div>
-                    <div className="dropdown-actions">
-                      <button 
-                        type="button" 
-                        className="action-btn select-all"
-                        onClick={handleSelectAll}
-                      >
-                        Select All
-                      </button>
-                      <button 
-                        type="button" 
-                        className="action-btn clear-all"
-                        onClick={handleClearAll}
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="dropdown-options">
-                    {availableTrainers.map((trainer) => {
-                      const isSelected = formData.trainers.includes(trainer.empId);
-                      return (
-                        <div
-                          key={trainer.empId}
-                          className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                          onClick={() => toggleTrainer(trainer.empId)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <span className="trainer-info">
-                            <strong>{trainer.empId}</strong> - {trainer.name}
-                            <small> ({trainer.experience} yrs exp)</small>
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              {errors.trainers && <span className="error-text">{errors.trainers}</span>}
-            </div>
+            <MultiSelectDropdown
+              label="Assign Trainers (Optional)"
+              options={trainerOptions}
+              selectedValues={formData.trainers}
+              onChange={handleTrainersChange}
+              placeholder="Search and select trainers..."
+              error={errors.trainers}
+              searchable={true}
+            />
           )}
         </div>
 
-        {formData.trainers.length > 0 && (
-          <div className="selected-trainers-preview">
-            <strong>Selected Trainers:</strong>
-            <div className="selected-tags">
-              {formData.trainers.map((empId) => {
-                const trainer = availableTrainers.find(t => t.empId === empId);
-                return (
-                  <span key={empId} className="selected-tag">
-                    {trainer?.name || empId}
-                    <button
-                      type="button"
-                      className="remove-tag"
-                      onClick={() => removeTrainer(empId)}
-                      aria-label="Remove trainer"
-                    >
-                      ×
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Updating...' : 'Update Subject'}
+            {loading ? (
+              <>
+                <span className="spinner-small"></span>
+                Updating Subject...
+              </>
+            ) : (
+              '✓ Update Subject'
+            )}
           </button>
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
-            Cancel
+            ✕ Cancel
           </button>
         </div>
       </form>
 
       <style jsx>{`
-        .custom-dropdown {
-          position: relative;
-          width: 100%;
+        .edit-subject-form {
+          scroll-margin-top: 20px;
         }
 
-        .dropdown-trigger {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px 12px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          background-color: white;
-          cursor: pointer;
-          transition: all 0.2s;
+        .form-header {
+          margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          border-bottom: 2px solid #f0f0f0;
         }
 
-        .dropdown-trigger:hover {
-          border-color: #4CAF50;
+        .form-header h2 {
+          margin: 0 0 0.5rem 0;
+          color: #333;
         }
 
-        .dropdown-trigger.open {
-          border-color: #4CAF50;
-          border-bottom-left-radius: 0;
-          border-bottom-right-radius: 0;
-        }
-
-        .dropdown-trigger.error {
-          border-color: #dc3545;
-        }
-
-        .dropdown-arrow {
+        .form-subtitle {
+          margin: 0;
           color: #666;
-          font-size: 12px;
-          transition: transform 0.2s;
+          font-size: 0.95rem;
         }
 
-        .dropdown-menu {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          max-height: 250px;
-          overflow-y: auto;
-          background: white;
-          border: 1px solid #4CAF50;
-          border-top: none;
-          border-bottom-left-radius: 4px;
-          border-bottom-right-radius: 4px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          z-index: 1000;
-        }
-
-        .dropdown-header {
-          padding: 8px 12px;
-          background: #f8f9fa;
-          border-bottom: 1px solid #dee2e6;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: sticky;
-          top: 0;
-          z-index: 1;
-        }
-
-        .dropdown-title {
-          font-weight: 600;
-          font-size: 0.9rem;
-        }
-
-        .dropdown-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .action-btn {
-          background: none;
-          border: none;
-          color: #4CAF50;
-          cursor: pointer;
+        .input-hint {
+          display: block;
+          margin-top: 0.25rem;
+          color: #666;
           font-size: 0.85rem;
-          font-weight: 500;
-          padding: 2px 6px;
-          border-radius: 3px;
-          transition: background-color 0.2s;
         }
 
-        .action-btn:hover {
-          background-color: rgba(76, 175, 80, 0.1);
+        .char-counter {
+          display: block;
+          margin-top: 0.25rem;
+          color: #666;
+          font-size: 0.85rem;
+          text-align: right;
         }
 
-        .action-btn.clear-all {
-          color: #dc3545;
+        .char-counter .warning {
+          color: #e74c3c;
+          font-weight: 600;
         }
 
-        .action-btn.clear-all:hover {
-          background-color: rgba(220, 53, 69, 0.1);
-        }
-
-        .dropdown-options {
-          padding: 4px 0;
-        }
-
-        .dropdown-item {
+        .loading-state {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 12px;
-          cursor: pointer;
-          transition: background-color 0.2s;
-          border-bottom: 1px solid #f0f0f0;
+          gap: 0.75rem;
+          padding: 1rem;
+          background: #f8f9fa;
+          border-radius: 8px;
+          color: #666;
         }
 
-        .dropdown-item:last-child {
-          border-bottom: none;
-        }
-
-        .dropdown-item:hover {
-          background-color: #f5f5f5;
-        }
-
-        .dropdown-item.selected {
-          background-color: #e8f5e9;
-        }
-
-        .dropdown-item input[type="checkbox"] {
-          cursor: pointer;
+        .spinner-small {
           width: 16px;
           height: 16px;
+          border: 2px solid #f3f3f3;
+          border-top: 2px solid #667eea;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          display: inline-block;
         }
 
-        .trainer-info {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 5px;
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
-        .trainer-info small {
-          color: #666;
-          font-size: 12px;
-        }
-
-        .selected-trainers-preview {
-          margin-top: 15px;
-          padding: 15px;
-          background-color: #f9f9f9;
+        .error-text {
+          color: #e74c3c;
+          font-size: 0.875rem;
+          font-weight: 600;
+          display: block;
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: #fff5f5;
+          border-left: 3px solid #e74c3c;
           border-radius: 4px;
         }
 
-        .selected-tags {
+        .form-actions {
           display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 10px;
+          gap: 1rem;
+          margin-top: 2rem;
+          padding-top: 1.5rem;
+          border-top: 2px solid #f0f0f0;
         }
 
-        .selected-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 10px;
-          background-color: #4CAF50;
-          color: white;
-          border-radius: 20px;
-          font-size: 14px;
-        }
-
-        .remove-tag {
-          background: none;
-          border: none;
-          color: white;
-          font-size: 20px;
-          cursor: pointer;
-          padding: 0;
-          width: 20px;
-          height: 20px;
+        .form-actions .btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 50%;
-          transition: background-color 0.2s;
-        }
-
-        .remove-tag:hover {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .loading-trainers,
-        .no-trainers-info {
-          padding: 15px;
-          text-align: center;
-          color: #666;
+          gap: 0.5rem;
         }
       `}</style>
     </div>
