@@ -1,9 +1,9 @@
 // src/components/Subjects/SubjectCard.jsx
 import React, { useState } from 'react';
-import { FaBook, FaClock, FaChartLine, FaUsers, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaBook, FaClock, FaChartLine, FaUsers, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
 import { getSubjectById } from '../../services/subjectService';
 
-const SubjectCard = ({ subject }) => {
+const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = false }) => {
   const [showTrainers, setShowTrainers] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -99,6 +99,27 @@ const SubjectCard = ({ subject }) => {
           </div>
         )}
       </div>
+
+      {(canEdit || canDelete) && (
+        <div className="subject-card-footer">
+          {canEdit && (
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => onEdit(subject)}
+            >
+              <FaEdit /> Edit
+            </button>
+          )}
+          {canDelete && (
+            <button 
+              className="btn btn-danger btn-sm"
+              onClick={() => onDelete(subject.subjectId)}
+            >
+              <FaTrash /> Delete
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

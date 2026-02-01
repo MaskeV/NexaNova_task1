@@ -182,8 +182,26 @@
   font-weight: 600;
 }
 
-/* Add Subject Form */
-.add-subject-form {
+/* Subject Card Footer - Edit/Delete Buttons */
+.subject-card-footer {
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.subject-card-footer .btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Add/Edit Subject Form */
+.add-subject-form,
+.edit-subject-form {
   margin-bottom: 2rem;
   animation: slideDown 0.3s ease;
 }
@@ -199,7 +217,8 @@
   }
 }
 
-.add-subject-form h2 {
+.add-subject-form h2,
+.edit-subject-form h2 {
   margin-bottom: 1.5rem;
   color: #333;
 }
@@ -311,5 +330,14 @@ textarea.form-control {
   .trainer-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+  
+  .subject-card-footer {
+    flex-direction: column;
+  }
+  
+  .subject-card-footer .btn-sm {
+    width: 100%;
+    justify-content: center;
   }
 }
