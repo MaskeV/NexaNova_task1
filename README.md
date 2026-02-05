@@ -1,6 +1,6 @@
 # Training Management System
 
-A comprehensive full-stack web application for managing training programs, subjects, and trainers. Built with React and Node.js.
+A comprehensive full-stack web application for managing training programs, subjects, and trainers. Built with React, Vue.js, and Express.js.
 
 ## Table of Contents
 
@@ -10,6 +10,7 @@ A comprehensive full-stack web application for managing training programs, subje
 - [Project Structure](#project-structure)
 - [Quick Start](#quick-start)
 - [Detailed Documentation](#detailed-documentation)
+- [Deployment](#deployment)
 - [Screenshots](#screenshots)
 - [Contributing](#contributing)
 - [License](#license)
@@ -48,7 +49,7 @@ The Training Management System is a modern web application designed to streamlin
 
 ### Trainer Management
 - Manage trainer profiles
-- Auto-generated trainer IDs (TR01, TR02, etc.)
+- Auto-generated trainer IDs (EMP101, EMP102, etc.)
 - Track experience and specializations
 - View assigned subjects
 - Update trainer information
@@ -67,6 +68,7 @@ The Training Management System is a modern web application designed to streamlin
 
 ### Frontend
 - React 18.x
+- Vue.js (for specific components)
 - React Router DOM (routing)
 - Axios (HTTP client)
 - React Toastify (notifications)
@@ -82,8 +84,6 @@ The Training Management System is a modern web application designed to streamlin
 - Nodemailer (email service)
 
 ### Development Tools
-- ESLint (code linting)
-- Prettier (code formatting)
 - Nodemon (auto-restart)
 - Git (version control)
 
@@ -93,7 +93,7 @@ The Training Management System is a modern web application designed to streamlin
 
 ```
 training-management-system/
-├── frontend/                    # React frontend application
+├── frontend/                    # React/Vue frontend application
 │   ├── public/
 │   ├── src/
 │   │   ├── components/         # React components
@@ -187,7 +187,7 @@ For detailed configuration instructions, see [Backend README](./backend/README.m
 mongod
 ```
 
-2. Start the backend server
+2. Start the backend development server
 ```bash
 cd backend
 npm run dev
@@ -224,10 +224,12 @@ For detailed setup and usage instructions, please refer to:
 
 ## API Endpoints
 
-### Base URL
+### Base URL 
 ```
-http://localhost:5000/api
+   https://nexanova-task1-backend.onrender.com
 ```
+
+
 
 ### Main Endpoints
 
@@ -269,11 +271,109 @@ For complete API documentation, see [Backend README](./backend/README.md).
 - Associated trainers
 
 **Trainers**
-- Employee ID (auto-generated: TR01, TR02...)
-- Name, email, experience, specialization
+- Employee ID (auto-generated: EMP101, EMP102...)
+- Name, email, experience
 - Associated subjects
 
 For detailed schema information, see [Backend README](./backend/README.md).
+
+---
+
+## Deployment
+
+### Live Application
+
+- **Frontend (Vercel)**: https://nexa-nova-task1.vercel.app/
+- **Backend (Render)**:  https://nexanova-task1-backend.onrender.com
+
+
+### Frontend Deployment on Vercel
+
+1. Push your code to GitHub repository
+
+2. Go to [Vercel](https://vercel.com) and sign in
+
+3. Click "New Project" and import your repository
+
+4. Configure the project:
+   - **Framework Preset**: Create React App
+   - **Root Directory**: frontend
+   - **Build Command**: `npm run build`
+   - **Output Directory**: build
+   - **Install Command**: `npm install`
+
+5. Add environment variables in Vercel dashboard:
+   ```
+   REACT_APP_API_URL=https://your-api.onrender.com/api
+   ```
+
+6. Click "Deploy"
+
+7. Vercel will automatically deploy your frontend and provide a URL
+
+### Backend Deployment on Render
+
+1. Push your code to GitHub repository
+
+2. Go to [Render](https://render.com) and sign in
+
+3. Click "New +" and select "Web Service"
+
+4. Connect your GitHub repository
+
+5. Configure the service:
+   - **Name**: training-management-backend
+   - **Environment**: Node
+   - **Region**: Choose closest to your users
+   - **Branch**: main
+   - **Root Directory**: backend
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm run dev`
+
+6. Add environment variables in Render dashboard:
+   ```
+   NODE_ENV=production
+   PORT=5000
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/training_db
+   JWT_SECRET=your_strong_secret_key
+   JWT_EXPIRE=30d
+   JWT_COOKIE_EXPIRE=30
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your_email@gmail.com
+   SMTP_PASS=your_app_password
+   FROM_EMAIL=noreply@training.com
+   FROM_NAME=Training System
+   ```
+
+7. Click "Create Web Service"
+
+8. Render will build and deploy your backend
+
+### Important Deployment Notes
+
+**For MongoDB:**
+- Use MongoDB Atlas for production database
+- Whitelist Render's IP addresses in MongoDB Atlas
+- Use connection string with credentials
+
+**For CORS:**
+- Update backend CORS settings to allow Vercel domain
+```javascript
+const corsOptions = {
+  origin: ['https://your-app.vercel.app'],
+  credentials: true
+};
+```
+
+**Environment Variables:**
+- Never commit `.env` files
+- Set all environment variables in hosting platforms
+- Use strong secrets in production
+
+**SSL/HTTPS:**
+- Both Vercel and Render provide automatic HTTPS
+- Update API calls in frontend to use HTTPS
 
 ---
 
@@ -287,32 +387,32 @@ Overview of subjects and trainers.
 
 ### Subject Management
 Add, edit, and delete subjects with trainer assignments.
+- React Development (SB01)
+- Node.js Backend Development (SB02)
+- Python Programming (SB03)
 
 ### Trainer Management
 Manage trainer profiles and specializations.
+- Amit Sharma (EMP101) - 6 years experience
+- Priya Verma (EMP102) - 4 years experience
+- Neha Iyer (EMP104) - 7 years experience
 
 ---
 
 ## Development
 
-### Running Tests
+### Running Development Servers
 
-Frontend tests:
-```bash
-cd frontend
-npm test
-```
-
-Backend tests:
+Backend development server with auto-reload:
 ```bash
 cd backend
-npm test
+npm run dev
 ```
 
-### Code Linting
-
+Frontend development server:
 ```bash
-npm run lint
+cd frontend
+npm start
 ```
 
 ### Building for Production
@@ -323,46 +423,7 @@ cd frontend
 npm run build
 ```
 
-Backend production mode:
-```bash
-cd backend
-npm start
-```
-
----
-
-## Deployment
-
-### Frontend Deployment
-
-The frontend can be deployed to:
-- Netlify
-- Vercel
-- GitHub Pages
-- AWS S3 + CloudFront
-
-Build the app:
-```bash
-cd frontend
-npm run build
-```
-
-Deploy the `build` folder to your hosting service.
-
-### Backend Deployment
-
-The backend can be deployed to:
-- Heroku
-- AWS EC2
-- DigitalOcean
-- Railway
-- Render
-
-Ensure environment variables are set in production:
-- Set `NODE_ENV=production`
-- Use production MongoDB URI
-- Use strong `JWT_SECRET`
-- Configure production email service
+This creates an optimized production build in the `build` folder.
 
 ---
 
@@ -374,8 +435,8 @@ Required environment variables for the backend:
 
 ```env
 PORT=5000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/training_db
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/training_db
 JWT_SECRET=your_secret_key
 JWT_EXPIRE=30d
 JWT_COOKIE_EXPIRE=30
@@ -385,6 +446,12 @@ SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
 FROM_EMAIL=noreply@training.com
 FROM_NAME=Training System
+```
+
+### Frontend Environment Variables
+
+```env
+REACT_APP_API_URL=https://your-api.onrender.com/api
 ```
 
 For detailed explanation of each variable, see [Backend README](./backend/README.md).
@@ -401,18 +468,30 @@ For detailed explanation of each variable, see [Backend README](./backend/README
 - Verify `.env` configuration
 
 **CORS errors**
-- Check backend CORS settings allow http://localhost:3000
+- Check backend CORS settings allow frontend URL
 - Verify frontend is making requests to correct backend URL
+- Ensure credentials are included in requests
 
 **Database connection failed**
 - Ensure MongoDB is installed and running
 - Check `MONGODB_URI` in `.env` file
 - Verify database credentials if using MongoDB Atlas
+- Whitelist IP addresses in MongoDB Atlas
 
 **Authentication errors**
 - Clear browser localStorage
 - Login again to get fresh token
 - Check `JWT_SECRET` is configured
+
+**Deployment issues on Render**
+- Check build logs for errors
+- Ensure all environment variables are set
+- Verify start command is correct: `npm run dev`
+
+**Deployment issues on Vercel**
+- Check build logs for errors
+- Ensure `REACT_APP_API_URL` points to Render backend
+- Verify build command: `npm run build`
 
 For detailed troubleshooting, see:
 - [Frontend README](./frontend/README.md)
@@ -433,7 +512,6 @@ Contributions are welcome! Please follow these steps:
 
 ### Coding Standards
 
-- Follow ESLint configuration
 - Write meaningful commit messages
 - Add comments for complex logic
 - Update documentation as needed
@@ -474,8 +552,11 @@ Your Name / Your Organization
 ## Acknowledgments
 
 - React team for the amazing framework
+- Vue.js community
 - Express.js community
 - MongoDB documentation
+- Vercel for frontend hosting
+- Render for backend hosting
 - All contributors
 
 ---
@@ -495,6 +576,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Trainer management
 - Auto-generated IDs
 - Email notifications
+- Deployed on Vercel (frontend) and Render (backend)
 
 ---
 
