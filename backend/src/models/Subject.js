@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const subjectSchema = new mongoose.Schema({
   subjectId: {
     type: String,
+    
     required: [true, 'Subject ID is required'],
     unique: true,
     trim: true,
