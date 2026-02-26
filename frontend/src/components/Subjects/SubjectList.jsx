@@ -4,6 +4,7 @@ import { getAllSubjects, deleteSubject } from '../../services/subjectService';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import Loading from '../Common/Loading';
+import SearchBox from '../Common/SearchBox';
 import SubjectCard from './SubjectCard';
 import AddSubject from './AddSubject';
 import EditSubject from './EditSubject';
@@ -15,6 +16,7 @@ const SubjectList = () => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const formRef = useRef(null);
 
   const isAdmin = user?.role === 'admin';
@@ -104,6 +106,21 @@ const SubjectList = () => {
     setShowAddForm(!showAddForm);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Filter subjects based on search term
+  const filteredSubjects = subjects.filter(subject => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      subject.name?.toLowerCase().includes(searchLower) ||
+      subject.subjectId?.toLowerCase().includes(searchLower) ||
+      subject.description?.toLowerCase().includes(searchLower) ||
+      subject.level?.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (loading) return <Loading message="Loading subjects..." />;
 
   return (
@@ -126,6 +143,22 @@ const SubjectList = () => {
           </button>
         )}
       </div>
+
+      {/* Search Box */}
+      {subjects.length > 0 && (
+        <div className="search-section">
+          <SearchBox
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Search subjects by name, ID, description, or level..."
+          />
+          {searchTerm && (
+            <p className="search-results-info">
+              Found {filteredSubjects.length} of {subjects.length} subject{filteredSubjects.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Form section with ref for scrolling */}
       <div ref={formRef}>
@@ -154,9 +187,14 @@ const SubjectList = () => {
           <h3>No subjects found</h3>
           <p>{isAdmin ? 'Click "Add Subject" to create your first subject' : 'No subjects available yet'}</p>
         </div>
+      ) : filteredSubjects.length === 0 ? (
+        <div className="empty-state">
+          <h3>No subjects match your search</h3>
+          <p>Try adjusting your search terms or <button onClick={() => setSearchTerm('')} className="clear-search-link">clear search</button></p>
+        </div>
       ) : (
         <div className="grid">
-          {subjects.map((subject) => (
+          {filteredSubjects.map((subject) => (
             <SubjectCard 
               key={subject.subjectId}
               subject={subject}
@@ -170,10 +208,39 @@ const SubjectList = () => {
       )}
 
       <style jsx>{`
+        .search-section {
+          margin-bottom: 2rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .search-results-info {
+          color: #666;
+          font-size: 0.95rem;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        .clear-search-link {
+          background: none;
+          border: none;
+          color: #2a5298;
+          text-decoration: underline;
+          cursor: pointer;
+          font-weight: 600;
+          padding: 0;
+          font-size: inherit;
+        }
+
+        .clear-search-link:hover {
+          color: #1e3c72;
+        }
+
         .form-container-wrapper {
           margin-bottom: 2rem;
           animation: slideDown 0.3s ease-out;
-          scroll-margin-top: 80px; /* Account for fixed navbar */
+          scroll-margin-top: 80px;
         }
 
         @keyframes slideDown {
@@ -191,6 +258,12 @@ const SubjectList = () => {
           color: #666;
           font-size: 0.9rem;
           margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+          .search-section {
+            margin-bottom: 1.5rem;
+          }
         }
       `}</style>
     </div>
