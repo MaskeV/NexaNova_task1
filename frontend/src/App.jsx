@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/Auth/PrivateRoute';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
@@ -15,7 +15,33 @@ import TrainerList from './components/Trainers/TrainerList';
 import SubjectList from './components/Subjects/SubjectList';
 import MyProfile from './components/Profile/MyProfile';
 
+// New Schedule Components (Admin only)
+import ScheduleManagement from './components/Schedule/ScheduleManagement';
+
+// New Enrollment Components (Admin only)
+import EnrollmentManagement from './components/Enrollment/EnrollmentManagement';
+
+// New Student Components (Students only)
+import MyCourses from './components/Student/MyCourses';
+import MyTimetable from './components/Student/MyTimetable';
+
 import './App.css';
+
+// Role-based route wrapper component
+const RoleBasedRoute = ({ children, allowedRoles }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redirect to appropriate dashboard based on role
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
 
 function AppContent() {
   const location = useLocation();
@@ -38,28 +64,66 @@ function AppContent() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
-            {/* Protected Routes */}
+            {/* Protected Routes - Accessible to all authenticated users */}
             <Route path="/" element={
               <PrivateRoute>
                 <Dashboard />
               </PrivateRoute>
             } />
             
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <MyProfile />
+              </PrivateRoute>
+            } />
+            
+            {/* Admin Only Routes */}
             <Route path="/trainers" element={
               <PrivateRoute>
-                <TrainerList />
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <TrainerList />
+                </RoleBasedRoute>
               </PrivateRoute>
             } />
             
             <Route path="/subjects" element={
               <PrivateRoute>
-                <SubjectList />
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <SubjectList />
+                </RoleBasedRoute>
               </PrivateRoute>
             } />
             
-            <Route path="/profile" element={
+            <Route path="/schedules" element={
               <PrivateRoute>
-                <MyProfile />
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <ScheduleManagement />
+                </RoleBasedRoute>
+              </PrivateRoute>
+            } />
+            
+            <Route path="/enrollments" element={
+              <PrivateRoute>
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <EnrollmentManagement />
+                </RoleBasedRoute>
+              </PrivateRoute>
+            } />
+            
+            {/* Student Only Routes */}
+            <Route path="/my-courses" element={
+              <PrivateRoute>
+                <RoleBasedRoute allowedRoles={['user']}>
+                  <MyCourses />
+                </RoleBasedRoute>
+              </PrivateRoute>
+            } />
+            
+            <Route path="/my-timetable" element={
+              <PrivateRoute>
+                <RoleBasedRoute allowedRoles={['user']}>
+                  <MyTimetable />
+                </RoleBasedRoute>
               </PrivateRoute>
             } />
             

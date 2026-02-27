@@ -1,0 +1,296 @@
+/* frontend/src/styles/pages/Enrollment.css */
+
+.enrollment-management {
+  padding: 2rem 0;
+}
+
+.enrollment-filters {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.enrollment-filters label {
+  font-weight: 600;
+  color: #333;
+  min-width: 120px;
+}
+
+.enrollment-filters .form-control {
+  flex: 1;
+  max-width: 400px;
+}
+
+.enroll-student-form {
+  margin-bottom: 2rem;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.manual-student-input {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.manual-student-input .form-control {
+  flex: 1;
+}
+
+.manual-student-input .btn {
+  flex-shrink: 0;
+}
+
+.selected-students {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  border-radius: 8px;
+  border: 2px solid #667eea;
+}
+
+.selected-students strong {
+  display: block;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1rem;
+}
+
+.student-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.student-chip {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.student-chip span {
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.student-chip button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  transition: background-color 0.2s ease;
+}
+
+.student-chip button:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.enrollment-list {
+  margin-top: 2rem;
+}
+
+.list-header {
+  margin-bottom: 1.5rem;
+}
+
+.list-header h3 {
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.enrollments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.enrollment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.enrollment-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.enrollment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.student-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.student-info svg {
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.student-info strong {
+  display: block;
+  color: #333;
+  font-size: 1rem;
+}
+
+.student-info small {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.enrollment-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.course-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.course-info svg {
+  color: #764ba2;
+  flex-shrink: 0;
+}
+
+.course-info strong {
+  display: block;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.course-info small {
+  display: block;
+  color: #666;
+  font-size: 0.8rem;
+  font-family: monospace;
+  margin-top: 0.25rem;
+}
+
+.enrollment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.meta-item span:first-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.status-select {
+  padding: 0.25rem 0.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-select:hover {
+  border-color: #667eea;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-icon.btn-danger {
+  background: transparent;
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-icon.btn-danger:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .enrollments-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .enrollment-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .enrollment-filters label {
+    min-width: 100%;
+  }
+
+  .enrollment-filters .form-control {
+    max-width: 100%;
+  }
+
+  .manual-student-input {
+    flex-direction: column;
+  }
+
+  .student-chips {
+    flex-direction: column;
+  }
+
+  .student-chip {
+    justify-content: space-between;
+  }
+}
