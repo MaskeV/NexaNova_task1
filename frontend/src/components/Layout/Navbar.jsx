@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaUser, FaSignOutAlt, FaCalendarAlt, FaUserGraduate, FaBook, FaClock } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt, FaCalendarAlt, FaUserGraduate, FaBook, FaClock, FaUserTie } from 'react-icons/fa';
 import '../../styles/components/Navbar.css';
 
 const Navbar = () => {
@@ -70,8 +70,19 @@ const Navbar = () => {
               </>
             )}
 
-            {/* Student Only Menu */}
-            {user?.role === 'user' && (
+            {/* UPDATED: Trainer Only Menu */}
+            {user?.role === 'trainer' && (
+              <Link 
+                to="/profile" 
+                className={`nav-link ${isActive('/profile') ? 'active' : ''}`}
+              >
+                <FaUserTie style={{ marginRight: '0.5rem' }} />
+                My Profile
+              </Link>
+            )}
+
+            {/* UPDATED: Student Only Menu */}
+            {user?.role === 'student' && (
               <>
                 <Link 
                   to="/my-courses" 
@@ -89,14 +100,6 @@ const Navbar = () => {
                 </Link>
               </>
             )}
-
-            {/* Profile - Available to all */}
-            <Link 
-              to="/profile" 
-              className={`nav-link ${isActive('/profile') ? 'active' : ''}`}
-            >
-              My Profile
-            </Link>
           </div>
         )}
 
@@ -106,10 +109,14 @@ const Navbar = () => {
               <div className="user-info">
                 <FaUser />
                 <span>{user?.username}</span>
+                {/* UPDATED: Role badges */}
                 {user?.role === 'admin' && (
                   <span className="admin-badge">Admin</span>
                 )}
-                {user?.role === 'user' && (
+                {user?.role === 'trainer' && (
+                  <span className="trainer-badge">Trainer</span>
+                )}
+                {user?.role === 'student' && (
                   <span className="student-badge">Student</span>
                 )}
               </div>

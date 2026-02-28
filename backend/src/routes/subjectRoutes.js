@@ -19,14 +19,13 @@ router.use((req, res, next) => {
 // Public routes - NO authentication required
 router.get('/', getAllSubjects);
 
-// Protected routes - Require authentication and admin role
-// Important: POST must come before /:id routes to avoid conflicts
+// UPDATED: Protected routes - Require authentication and admin role
 router.post('/', protect, authorize('admin'), addSubject);
 
 // Public route - Get single subject with trainers
 router.get('/:id', getSubjectWithTrainers);
 
-// Protected routes - Require authentication and admin role
+// UPDATED: Protected routes - Require authentication and admin role
 router.put('/:id', protect, authorize('admin'), updateSubject);
 router.delete('/:id', protect, authorize('admin'), deleteSubject);
 

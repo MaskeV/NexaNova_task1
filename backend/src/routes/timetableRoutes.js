@@ -17,13 +17,13 @@ router.use((req, res, next) => {
 // All routes require authentication
 router.use(protect);
 
-// GET current user's timetable (Student)
-router.get('/my-timetable', getMyTimetable);
+// UPDATED: GET current user's timetable (Student only)
+router.get('/my-timetable', authorize('student'), getMyTimetable);
 
 // GET timetable statistics (Admin only)
 router.get('/stats/:weekId', authorize('admin'), getTimetableStats);
 
-// GET specific student's timetable (Student can view own, Admin can view all)
-router.get('/student/:studentId', getStudentTimetable);
+// UPDATED: GET specific student's timetable (Student can view own, Admin can view all)
+router.get('/student/:studentId', authorize('student', 'admin'), getStudentTimetable);
 
 module.exports = router;

@@ -19,7 +19,10 @@ const SubjectList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const formRef = useRef(null);
 
-  const isAdmin = user?.role === 'admin';
+  
+// With:
+const isAdmin = user?.role === 'admin';
+const isTrainer = user?.role === 'trainer';
 
   useEffect(() => {
     fetchSubjects();

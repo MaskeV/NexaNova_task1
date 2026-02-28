@@ -95,11 +95,11 @@ export const VALIDATION = {
 // Subject Levels
 export const SUBJECT_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 
-// User Roles
+// UPDATED: User Roles
 export const USER_ROLES = {
   ADMIN: 'admin',
-  USER: 'user', // This is the student role
-  STUDENT: 'user' // Alias for clarity in code
+  TRAINER: 'trainer',  // NEW
+  STUDENT: 'student'   // NEW (renamed from USER)
 };
 
 // Enrollment Status
@@ -116,8 +116,9 @@ export const TIME_SLOTS = ['8AM-11AM', '11AM-2PM', '2PM-5PM', '5PM-8PM'];
 // Weekdays
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-// Role Display Names
+// UPDATED: Role Display Names
 export const ROLE_NAMES = {
   admin: 'Administrator',
-  user: 'Student'
+  trainer: 'Trainer',   // NEW
+  student: 'Student'    // NEW
 };

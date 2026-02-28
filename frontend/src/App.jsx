@@ -15,19 +15,19 @@ import TrainerList from './components/Trainers/TrainerList';
 import SubjectList from './components/Subjects/SubjectList';
 import MyProfile from './components/Profile/MyProfile';
 
-// New Schedule Components (Admin only)
+// Schedule Components (Admin only)
 import ScheduleManagement from './components/Schedule/ScheduleManagement';
 
-// New Enrollment Components (Admin only)
+// Enrollment Components (Admin only)
 import EnrollmentManagement from './components/Enrollment/EnrollmentManagement';
 
-// New Student Components (Students only)
+// Student Components (Students only)
 import MyCourses from './components/Student/MyCourses';
 import MyTimetable from './components/Student/MyTimetable';
 
 import './App.css';
 
-// Role-based route wrapper component
+// UPDATED: Role-based route wrapper component
 const RoleBasedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
   
@@ -71,9 +71,12 @@ function AppContent() {
               </PrivateRoute>
             } />
             
+            {/* UPDATED: Profile - Only for trainers */}
             <Route path="/profile" element={
               <PrivateRoute>
-                <MyProfile />
+                <RoleBasedRoute allowedRoles={['trainer']}>
+                  <MyProfile />
+                </RoleBasedRoute>
               </PrivateRoute>
             } />
             
@@ -110,10 +113,10 @@ function AppContent() {
               </PrivateRoute>
             } />
             
-            {/* Student Only Routes */}
+            {/* UPDATED: Student Only Routes */}
             <Route path="/my-courses" element={
               <PrivateRoute>
-                <RoleBasedRoute allowedRoles={['user']}>
+                <RoleBasedRoute allowedRoles={['student']}>
                   <MyCourses />
                 </RoleBasedRoute>
               </PrivateRoute>
@@ -121,7 +124,7 @@ function AppContent() {
             
             <Route path="/my-timetable" element={
               <PrivateRoute>
-                <RoleBasedRoute allowedRoles={['user']}>
+                <RoleBasedRoute allowedRoles={['student']}>
                   <MyTimetable />
                 </RoleBasedRoute>
               </PrivateRoute>

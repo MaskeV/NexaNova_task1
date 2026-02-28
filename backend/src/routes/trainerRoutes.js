@@ -8,20 +8,20 @@ const {
   getTrainerById,
   getTrainersBySubject
 } = require('../controllers/trainerController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Apply protect middleware to all routes
 router.use(protect);
 
-// /trainer routes
-router.post('/', addTrainer);
-router.get('/', getAllTrainers);
-router.delete('/', deleteTrainer);
+// UPDATED: /trainer routes - Admin only for management, others can view
+router.post('/', authorize('admin'), addTrainer);
+router.get('/', getAllTrainers); // All authenticated users can view
+router.delete('/', authorize('admin'), deleteTrainer);
 
 // /trainer/:id
-router.get('/:id', getTrainerById);
+router.get('/:id', getTrainerById); // All authenticated users can view
 
 // /trainer/:subject/topic
-router.get('/:subject/topic', getTrainersBySubject);
+router.get('/:subject/topic', getTrainersBySubject); // All authenticated users can view
 
 module.exports = router;

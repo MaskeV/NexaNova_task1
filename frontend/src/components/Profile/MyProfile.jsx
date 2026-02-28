@@ -324,37 +324,62 @@ const MyProfile = () => {
   }
 
   // Admin users view (they don't need trainer profiles)
-  const isAdmin = user?.role === 'admin';
-  if (isAdmin) {
-    return (
-      <div className="profile-container">
-        <div className="page-header">
-          <h1>My Profile</h1>
+// In MyProfile.jsx, update the admin check:
+
+
+
+
+// Then update the admin view section (around line 210):
+if (isAdmin) {
+  return (
+    <div className="profile-container">
+      <div className="page-header">
+        <h1>My Profile</h1>
+      </div>
+      <div className="admin-info-card card">
+        <div className="admin-badge-large">ADMIN</div>
+        <div className="admin-details">
+          <h2>Administrator Account</h2>
+          <div className="detail-row">
+            <span className="detail-label">Username:</span>
+            <span className="detail-value">{user?.username || 'Admin'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Email:</span>
+            <span className="detail-value">{user?.email}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Role:</span>
+            <span className="detail-value">Administrator</span>
+          </div>
         </div>
-        <div className="admin-info-card card">
-          <div className="admin-badge-large">ADMIN</div>
-          <div className="admin-details">
-            <h2>Administrator Account</h2>
-            <div className="detail-row">
-              <span className="detail-label">Username:</span>
-              <span className="detail-value">{user?.username || 'Admin'}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Email:</span>
-              <span className="detail-value">{user?.email}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Role:</span>
-              <span className="detail-value">Administrator</span>
-            </div>
-          </div>
-          <div className="admin-info-message">
-            <p>ℹ️ As an administrator, you don't need a trainer profile. You can manage trainers and subjects from the respective pages.</p>
-          </div>
+        <div className="admin-info-message">
+          <p>ℹ️ As an administrator, you don't need a trainer profile. You can manage trainers and subjects from the respective pages.</p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+// Add check for non-trainers trying to access profile:
+if (!isTrainer) {
+  return (
+    <div className="profile-container">
+      <div className="page-header">
+        <h1>Access Denied</h1>
+      </div>
+      <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+        <h2>⚠️ Trainer Profile Only</h2>
+        <p style={{ color: '#666', marginTop: '1rem' }}>
+          Only users with the Trainer role can create and manage profiles.
+          {user?.role === 'student' && ' Students can enroll in courses from the My Courses page.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Rest of the component continues...
 
   // Regular users - decide what to show
   const showForm = !hasProfile || isEditing;

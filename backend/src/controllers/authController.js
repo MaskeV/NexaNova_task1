@@ -1,5 +1,5 @@
 // src/controllers/authController.js
-const User = require('../models/User'); // Changed from '../models/user' to '../models/User'
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
@@ -30,6 +30,11 @@ const register = async (req, res) => {
       errors.password = 'Password is required and must be at least 6 characters';
     }
 
+    // UPDATED: Validate role
+    if (role && !['trainer', 'student'].includes(role)) {
+      errors.role = 'Role must be either trainer or student';
+    }
+
     if (Object.keys(errors).length > 0) {
       return res.status(400).json({ success: false, message: 'Validation failed', errors });
     }
@@ -42,12 +47,13 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'User already exists', errors });
     }
 
-    // Create user
+    // UPDATED: Create user with specified role (trainer or student)
+    // Only admins can create other admins (handled separately)
     const user = await User.create({
       username,
       email,
       password,
-      role: role || 'user'
+      role: role || 'student' // Default to student if not specified
     });
 
     // Generate token

@@ -14,7 +14,8 @@ const Register = () => {
     username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'student' // UPDATED: Default to student
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -68,6 +69,11 @@ const Register = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    // UPDATED: Role validation
+    if (!['trainer', 'student'].includes(formData.role)) {
+      newErrors.role = 'Please select a valid role';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -85,7 +91,8 @@ const Register = () => {
       const userData = {
         username: formData.username.trim(),
         email: formData.email.trim().toLowerCase(),
-        password: formData.password
+        password: formData.password,
+        role: formData.role // UPDATED: Include role
       };
 
       await register(userData);
@@ -108,7 +115,7 @@ const Register = () => {
         <div className="auth-card">
           <div className="auth-card-header">
             <h1>Create Your Account</h1>
-            <p>Join NexaNova and start managing trainers</p>
+            <p>Join NexaNova and start your learning journey</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
@@ -146,6 +153,30 @@ const Register = () => {
               {errors.email && (
                 <span className="error-message">{errors.email}</span>
               )}
+            </div>
+
+            {/* UPDATED: Role Selection */}
+            <div className="form-group">
+              <label htmlFor="role">I am a</label>
+              <select
+                id="role"
+                name="role"
+                className={`form-input ${errors.role ? 'error' : ''}`}
+                value={formData.role}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="student">Student</option>
+                <option value="trainer">Trainer</option>
+              </select>
+              {errors.role && (
+                <span className="error-message">{errors.role}</span>
+              )}
+              <small className="input-hint">
+                {formData.role === 'trainer' 
+                  ? 'Trainers can create profiles and manage courses' 
+                  : 'Students can enroll in courses and view timetables'}
+              </small>
             </div>
 
             <div className="form-group">

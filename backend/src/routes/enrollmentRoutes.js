@@ -30,8 +30,8 @@ router.post('/bulk', authorize('admin'), bulkEnrollStudents);
 // GET all enrollments (Admin only)
 router.get('/', authorize('admin'), getAllEnrollments);
 
-// GET student's courses (Student can view own, Admin can view all)
-router.get('/student/:studentId/courses', getStudentCourses);
+// UPDATED: GET student's courses (Student can view own, Admin can view all)
+router.get('/student/:studentId/courses', authorize('student', 'admin'), getStudentCourses);
 
 // GET course enrollments (Admin only)
 router.get('/course/:courseId', authorize('admin'), getCourseEnrollments);
