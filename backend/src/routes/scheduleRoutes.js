@@ -8,7 +8,7 @@ const {
   getAllSchedules,
   deleteSchedule,
   deallocateSlot
-} = require('../controllers/Schedulecontroller');
+} = require('../controllers/scheduleController'); // ✅ FIXED: lowercase 's'
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Logging middleware for debugging
