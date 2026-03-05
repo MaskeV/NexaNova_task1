@@ -1,43 +1,56 @@
-// backend/src/controllers/enrollmentController.js
+// backend/src/controllers/enrollmentController.js - REPLACE ENTIRE FILE
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Subject = require('../models/Subject');
+const Course = require('../models/Course');
 
 // @desc    Enroll a single student in a course
 // @route   POST /api/enrollments
 // @access  Admin
 const enrollStudent = async (req, res) => {
   try {
-    const { studentId, courseId } = req.body;
+    const { studentEmail, courseId } = req.body;  // CHANGED: Use email instead of studentId
     
     // Validation
-    if (!studentId || !courseId) {
+    if (!studentEmail || !courseId) {
       return res.status(400).json({
         success: false,
-        message: 'Student ID and Course ID are required'
+        message: 'Student email and Course ID are required'
       });
     }
     
-    // Verify student exists
-    const student = await User.findById(studentId);
+    // Find student by email
+    const student = await User.findOne({ 
+      email: studentEmail.toLowerCase().trim(),
+      role: 'student'
+    });
+    
     if (!student) {
       return res.status(404).json({
         success: false,
-        message: 'Student not found'
+        message: 'Student not found with this email or user is not a student'
       });
     }
     
-    // Verify student role
-    if (student.role !== 'user') {
-      return res.status(400).json({
-        success: false,
-        message: 'User is not a student'
-      });
+    // Verify course exists (can be either Course or Subject for backward compatibility)
+    let courseExists = false;
+    let courseName = '';
+    
+    // Check if it's a new Course
+    const course = await Course.findOne({ courseId });
+    if (course) {
+      courseExists = true;
+      courseName = course.name;
+    } else {
+      // Check if it's an old Subject (for backward compatibility)
+      const subject = await Subject.findOne({ subjectId: courseId });
+      if (subject) {
+        courseExists = true;
+        courseName = subject.name;
+      }
     }
     
-    // Verify course exists
-    const course = await Subject.findOne({ subjectId: courseId });
-    if (!course) {
+    if (!courseExists) {
       return res.status(404).json({
         success: false,
         message: 'Course not found'
@@ -46,7 +59,7 @@ const enrollStudent = async (req, res) => {
     
     // Check if already enrolled
     const existingEnrollment = await Enrollment.findOne({
-      student: studentId,
+      student: student._id,
       course: courseId,
       status: 'active'
     });
@@ -60,20 +73,20 @@ const enrollStudent = async (req, res) => {
     
     // Create enrollment
     const enrollment = await Enrollment.create({
-      student: studentId,
+      student: student._id,
       studentEmail: student.email,
       course: courseId,
       enrolledBy: req.user._id
     });
     
-    // Populate student and course details
+    // Populate student details
     await enrollment.populate('student', 'username email');
     
     console.log('✅ Student enrolled:', student.email, 'in', courseId);
     
     res.status(201).json({
       success: true,
-      message: 'Student enrolled successfully',
+      message: `Student ${student.email} enrolled successfully in ${courseName}`,
       data: enrollment
     });
   } catch (error) {
@@ -98,13 +111,13 @@ const enrollStudent = async (req, res) => {
 // @access  Admin
 const bulkEnrollStudents = async (req, res) => {
   try {
-    const { studentIds, courseId } = req.body;
+    const { studentEmails, courseId } = req.body;  // CHANGED: Use emails instead of IDs
     
     // Validation
-    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+    if (!studentEmails || !Array.isArray(studentEmails) || studentEmails.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Student IDs array is required and must not be empty'
+        message: 'Student emails array is required and must not be empty'
       });
     }
     
@@ -116,8 +129,22 @@ const bulkEnrollStudents = async (req, res) => {
     }
     
     // Verify course exists
-    const course = await Subject.findOne({ subjectId: courseId });
-    if (!course) {
+    let courseExists = false;
+    let courseName = '';
+    
+    const course = await Course.findOne({ courseId });
+    if (course) {
+      courseExists = true;
+      courseName = course.name;
+    } else {
+      const subject = await Subject.findOne({ subjectId: courseId });
+      if (subject) {
+        courseExists = true;
+        courseName = subject.name;
+      }
+    }
+    
+    if (!courseExists) {
       return res.status(404).json({
         success: false,
         message: 'Course not found'
@@ -127,43 +154,38 @@ const bulkEnrollStudents = async (req, res) => {
     const results = {
       successful: [],
       failed: [],
-      totalProcessed: studentIds.length
+      totalProcessed: studentEmails.length
     };
     
     // Process each student
-    for (const studentId of studentIds) {
+    for (const email of studentEmails) {
       try {
-        // Verify student exists
-        const student = await User.findById(studentId);
+        const studentEmail = email.toLowerCase().trim();
+        
+        // Find student by email
+        const student = await User.findOne({ 
+          email: studentEmail,
+          role: 'student'
+        });
         
         if (!student) {
           results.failed.push({
-            studentId,
-            reason: 'Student not found'
-          });
-          continue;
-        }
-        
-        if (student.role !== 'user') {
-          results.failed.push({
-            studentId,
-            email: student.email,
-            reason: 'User is not a student'
+            email: studentEmail,
+            reason: 'Student not found or user is not a student'
           });
           continue;
         }
         
         // Check if already enrolled
         const existingEnrollment = await Enrollment.findOne({
-          student: studentId,
+          student: student._id,
           course: courseId,
           status: 'active'
         });
         
         if (existingEnrollment) {
           results.failed.push({
-            studentId,
-            email: student.email,
+            email: studentEmail,
             reason: 'Already enrolled in this course'
           });
           continue;
@@ -171,23 +193,23 @@ const bulkEnrollStudents = async (req, res) => {
         
         // Create enrollment
         const enrollment = await Enrollment.create({
-          student: studentId,
+          student: student._id,
           studentEmail: student.email,
           course: courseId,
           enrolledBy: req.user._id
         });
         
         results.successful.push({
-          studentId,
-          email: student.email,
+          email: studentEmail,
+          username: student.username,
           enrollmentId: enrollment._id
         });
         
-        console.log('✅ Enrolled:', student.email, 'in', courseId);
+        console.log('✅ Enrolled:', studentEmail, 'in', courseId);
       } catch (error) {
-        console.error(`❌ Failed to enroll student ${studentId}:`, error);
+        console.error(`❌ Failed to enroll student ${email}:`, error);
         results.failed.push({
-          studentId,
+          email: email,
           reason: error.message
         });
       }
@@ -208,14 +230,27 @@ const bulkEnrollStudents = async (req, res) => {
 };
 
 // @desc    Get all courses a student is enrolled in
-// @route   GET /api/enrollments/student/:studentId/courses
+// @route   GET /api/enrollments/student/:studentEmail/courses
 // @access  Private (Student or Admin)
 const getStudentCourses = async (req, res) => {
   try {
-    const { studentId } = req.params;
+    const { studentEmail } = req.params;
+    
+    // Find student by email
+    const student = await User.findOne({ 
+      email: studentEmail.toLowerCase().trim(),
+      role: 'student'
+    });
+    
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
     
     // Check authorization: user can only view their own enrollments unless admin
-    if (req.user._id.toString() !== studentId && req.user.role !== 'admin') {
+    if (req.user.email !== student.email && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view these enrollments'
@@ -223,23 +258,45 @@ const getStudentCourses = async (req, res) => {
     }
     
     const enrollments = await Enrollment.find({
-      student: studentId,
+      student: student._id,
       status: 'active'
     }).populate('student', 'username email');
     
     // Get course details for each enrollment
     const enrollmentsWithCourses = await Promise.all(
       enrollments.map(async (enrollment) => {
-        const course = await Subject.findOne({ subjectId: enrollment.course });
-        return {
-          ...enrollment.toObject(),
-          courseDetails: course ? {
-            subjectId: course.subjectId,
+        // Try to find as Course first, then Subject
+        let courseDetails = null;
+        
+        const course = await Course.findOne({ courseId: enrollment.course });
+        if (course) {
+          courseDetails = {
+            courseId: course.courseId,
             name: course.name,
             description: course.description,
+            category: course.category,
             duration: course.duration,
-            level: course.level
-          } : null
+            level: course.level,
+            totalHours: course.totalHours,
+            type: 'course'
+          };
+        } else {
+          const subject = await Subject.findOne({ subjectId: enrollment.course });
+          if (subject) {
+            courseDetails = {
+              subjectId: subject.subjectId,
+              name: subject.name,
+              description: subject.description,
+              duration: subject.totalDuration || subject.duration,
+              level: subject.level,
+              type: 'subject'
+            };
+          }
+        }
+        
+        return {
+          ...enrollment.toObject(),
+          courseDetails
         };
       })
     );
@@ -269,8 +326,21 @@ const getCourseEnrollments = async (req, res) => {
       .populate('student', 'username email')
       .sort({ enrollmentDate: -1 });
     
+    // Get course name
+    let courseName = '';
+    const course = await Course.findOne({ courseId });
+    if (course) {
+      courseName = course.name;
+    } else {
+      const subject = await Subject.findOne({ subjectId: courseId });
+      if (subject) {
+        courseName = subject.name;
+      }
+    }
+    
     res.status(200).json({
       success: true,
+      courseName,
       count: enrollments.length,
       data: enrollments
     });
@@ -302,14 +372,32 @@ const getAllEnrollments = async (req, res) => {
     // Get course details for each enrollment
     const enrollmentsWithCourses = await Promise.all(
       enrollments.map(async (enrollment) => {
-        const course = await Subject.findOne({ subjectId: enrollment.course });
+        let courseDetails = null;
+        
+        const course = await Course.findOne({ courseId: enrollment.course });
+        if (course) {
+          courseDetails = {
+            courseId: course.courseId,
+            name: course.name,
+            category: course.category,
+            level: course.level,
+            type: 'course'
+          };
+        } else {
+          const subject = await Subject.findOne({ subjectId: enrollment.course });
+          if (subject) {
+            courseDetails = {
+              subjectId: subject.subjectId,
+              name: subject.name,
+              level: subject.level,
+              type: 'subject'
+            };
+          }
+        }
+        
         return {
           ...enrollment.toObject(),
-          courseDetails: course ? {
-            subjectId: course.subjectId,
-            name: course.name,
-            level: course.level
-          } : null
+          courseDetails
         };
       })
     );

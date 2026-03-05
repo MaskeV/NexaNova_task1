@@ -1,4 +1,4 @@
-// backend/src/controllers/courseController.js
+// backend/src/controllers/courseController.js - REPLACE ENTIRE FILE
 const Course = require('../models/Course');
 const Subject = require('../models/Subject');
 const Enrollment = require('../models/Enrollment');
@@ -28,16 +28,16 @@ const generateCourseId = async () => {
 // @access  Admin
 const createCourse = async (req, res) => {
   try {
-    const { name, description, duration, level, modules } = req.body;
+    const { name, description, category, duration, level, subjects, prerequisites, outcomes } = req.body;
     
-    // Validate modules if provided
-    if (modules && modules.length > 0) {
-      for (const module of modules) {
-        const subject = await Subject.findOne({ subjectId: module.subjectId });
+    // Validate subjects if provided
+    if (subjects && subjects.length > 0) {
+      for (const subjectRef of subjects) {
+        const subject = await Subject.findOne({ subjectId: subjectRef.subjectId });
         if (!subject) {
           return res.status(400).json({
             success: false,
-            message: `Subject ${module.subjectId} not found`
+            message: `Subject ${subjectRef.subjectId} not found`
           });
         }
       }
@@ -51,9 +51,12 @@ const createCourse = async (req, res) => {
       courseId,
       name: name.trim(),
       description: description.trim(),
+      category: category || 'Other',
       duration: parseInt(duration),
-      level,
-      modules: modules || [],
+      level: level || 'Beginner',
+      subjects: subjects || [],
+      prerequisites: prerequisites || [],
+      outcomes: outcomes || [],
       createdBy: req.user._id
     });
     
@@ -91,10 +94,11 @@ const createCourse = async (req, res) => {
 // @access  Public
 const getAllCourses = async (req, res) => {
   try {
-    const { level, isActive } = req.query;
+    const { level, category, isActive } = req.query;
     
     const filter = {};
     if (level) filter.level = level;
+    if (category) filter.category = category;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     
     const courses = await Course.find(filter).sort({ createdAt: -1 });
@@ -113,7 +117,7 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-// @desc    Get course by ID with all modules populated
+// @desc    Get course by ID with full hierarchy (subjects and modules)
 // @route   GET /api/courses/:id
 // @access  Public
 const getCourseById = async (req, res) => {
@@ -129,18 +133,32 @@ const getCourseById = async (req, res) => {
       });
     }
     
-    // Populate modules with full subject details and trainers
-    const populatedModules = await Promise.all(
-      course.modules.map(async (module) => {
-        const subject = await Subject.findOne({ subjectId: module.subjectId });
+    // Populate subjects with their modules
+    const populatedSubjects = await Promise.all(
+      course.subjects.map(async (subjectRef) => {
+        const subject = await Subject.findOne({ subjectId: subjectRef.subjectId });
         
         if (!subject) {
           return {
-            subjectId: module.subjectId,
-            sequenceOrder: module.sequenceOrder,
+            subjectId: subjectRef.subjectId,
+            order: subjectRef.order,
             notFound: true
           };
         }
+        
+        // Get modules for this subject
+        const Module = require('../models/Module');
+        const modules = await Promise.all(
+          subject.modules.map(async (moduleRef) => {
+            const module = await Module.findOne({ moduleId: moduleRef.moduleId });
+            if (!module) return null;
+            
+            return {
+              ...module.toObject(),
+              order: moduleRef.order
+            };
+          })
+        );
         
         // Get trainers for this subject
         const Trainer = require('../models/Trainer');
@@ -152,16 +170,17 @@ const getCourseById = async (req, res) => {
           subjectId: subject.subjectId,
           name: subject.name,
           description: subject.description,
-          duration: subject.duration,
           level: subject.level,
-          sequenceOrder: module.sequenceOrder,
+          totalDuration: subject.totalDuration,
+          order: subjectRef.order,
+          modules: modules.filter(m => m !== null).sort((a, b) => a.order - b.order),
           trainers: trainers
         };
       })
     );
     
-    // Sort modules by sequence order
-    populatedModules.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+    // Sort subjects by order
+    populatedSubjects.sort((a, b) => a.order - b.order);
     
     // Get enrollment count
     const enrollmentCount = await Enrollment.countDocuments({
@@ -173,8 +192,13 @@ const getCourseById = async (req, res) => {
       success: true,
       data: {
         ...course.toObject(),
-        populatedModules,
-        enrollmentCount
+        populatedSubjects,
+        enrollmentCount,
+        stats: {
+          subjectCount: populatedSubjects.filter(s => !s.notFound).length,
+          totalModules: populatedSubjects.reduce((sum, s) => sum + (s.modules?.length || 0), 0),
+          totalHours: course.totalHours
+        }
       }
     });
   } catch (error) {
@@ -186,13 +210,13 @@ const getCourseById = async (req, res) => {
   }
 };
 
-// @desc    Add module to course
-// @route   POST /api/courses/:id/modules
+// @desc    Add subject to course
+// @route   POST /api/courses/:id/subjects
 // @access  Admin
-const addModuleToCourse = async (req, res) => {
+const addSubjectToCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subjectId, sequenceOrder } = req.body;
+    const { subjectId, order } = req.body;
     
     if (!subjectId) {
       return res.status(400).json({
@@ -218,35 +242,32 @@ const addModuleToCourse = async (req, res) => {
       });
     }
     
-    // Check if module already exists
-    const existingModule = course.modules.find(m => m.subjectId === subjectId);
-    if (existingModule) {
+    // Check if subject already exists
+    const existingSubject = course.subjects.find(s => s.subjectId === subjectId);
+    if (existingSubject) {
       return res.status(400).json({
         success: false,
-        message: 'Module already exists in this course'
+        message: 'Subject already exists in this course'
       });
     }
     
-    // Determine sequence order
-    const order = sequenceOrder || (course.modules.length + 1);
-    
-    // Add module
-    course.modules.push({
+    // Add subject
+    course.subjects.push({
       subjectId,
-      sequenceOrder: order
+      order: order || (course.subjects.length + 1)
     });
     
     await course.save();
     
-    console.log('✅ Module added to course:', course.courseId, '→', subjectId);
+    console.log('✅ Subject added to course:', course.courseId, '→', subjectId);
     
     res.status(200).json({
       success: true,
-      message: 'Module added to course successfully',
+      message: 'Subject added to course successfully',
       data: course
     });
   } catch (error) {
-    console.error('❌ Add module error:', error);
+    console.error('❌ Add subject error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -254,10 +275,10 @@ const addModuleToCourse = async (req, res) => {
   }
 };
 
-// @desc    Remove module from course
-// @route   DELETE /api/courses/:id/modules/:subjectId
+// @desc    Remove subject from course
+// @route   DELETE /api/courses/:id/subjects/:subjectId
 // @access  Admin
-const removeModuleFromCourse = async (req, res) => {
+const removeSubjectFromCourse = async (req, res) => {
   try {
     const { id, subjectId } = req.params;
     
@@ -269,26 +290,26 @@ const removeModuleFromCourse = async (req, res) => {
       });
     }
     
-    const moduleIndex = course.modules.findIndex(m => m.subjectId === subjectId);
-    if (moduleIndex === -1) {
+    const subjectIndex = course.subjects.findIndex(s => s.subjectId === subjectId);
+    if (subjectIndex === -1) {
       return res.status(404).json({
         success: false,
-        message: 'Module not found in this course'
+        message: 'Subject not found in this course'
       });
     }
     
-    course.modules.splice(moduleIndex, 1);
+    course.subjects.splice(subjectIndex, 1);
     await course.save();
     
-    console.log('✅ Module removed from course:', course.courseId, '→', subjectId);
+    console.log('✅ Subject removed from course:', course.courseId, '→', subjectId);
     
     res.status(200).json({
       success: true,
-      message: 'Module removed from course successfully',
+      message: 'Subject removed from course successfully',
       data: course
     });
   } catch (error) {
-    console.error('❌ Remove module error:', error);
+    console.error('❌ Remove subject error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -302,7 +323,7 @@ const removeModuleFromCourse = async (req, res) => {
 const updateCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, duration, level, modules, isActive } = req.body;
+    const { name, description, category, duration, level, subjects, prerequisites, outcomes, isActive } = req.body;
     
     const course = await Course.findOne({ courseId: id });
     if (!course) {
@@ -315,9 +336,12 @@ const updateCourse = async (req, res) => {
     // Update fields
     if (name) course.name = name.trim();
     if (description) course.description = description.trim();
+    if (category) course.category = category;
     if (duration !== undefined) course.duration = parseInt(duration);
     if (level) course.level = level;
-    if (modules !== undefined) course.modules = modules;
+    if (subjects !== undefined) course.subjects = subjects;
+    if (prerequisites !== undefined) course.prerequisites = prerequisites;
+    if (outcomes !== undefined) course.outcomes = outcomes;
     if (isActive !== undefined) course.isActive = isActive;
     
     await course.save();
@@ -396,7 +420,7 @@ const deleteCourse = async (req, res) => {
   }
 };
 
-// @desc    Get all courses with full module hierarchy
+// @desc    Get all courses with full hierarchy
 // @route   GET /api/courses/hierarchy
 // @access  Public
 const getCoursesWithHierarchy = async (req, res) => {
@@ -405,11 +429,26 @@ const getCoursesWithHierarchy = async (req, res) => {
     
     const coursesWithHierarchy = await Promise.all(
       courses.map(async (course) => {
-        const populatedModules = await Promise.all(
-          course.modules.map(async (module) => {
-            const subject = await Subject.findOne({ subjectId: module.subjectId });
+        const populatedSubjects = await Promise.all(
+          course.subjects.map(async (subjectRef) => {
+            const subject = await Subject.findOne({ subjectId: subjectRef.subjectId });
             
             if (!subject) return null;
+            
+            const Module = require('../models/Module');
+            const modules = await Promise.all(
+              subject.modules.map(async (moduleRef) => {
+                const module = await Module.findOne({ moduleId: moduleRef.moduleId });
+                if (!module) return null;
+                
+                return {
+                  moduleId: module.moduleId,
+                  name: module.name,
+                  duration: module.duration,
+                  order: moduleRef.order
+                };
+              })
+            );
             
             const Trainer = require('../models/Trainer');
             const trainers = await Trainer.find({
@@ -419,9 +458,10 @@ const getCoursesWithHierarchy = async (req, res) => {
             return {
               subjectId: subject.subjectId,
               name: subject.name,
-              duration: subject.duration,
               level: subject.level,
-              sequenceOrder: module.sequenceOrder,
+              totalDuration: subject.totalDuration,
+              order: subjectRef.order,
+              modules: modules.filter(m => m !== null).sort((a, b) => a.order - b.order),
               trainers: trainers
             };
           })
@@ -431,10 +471,11 @@ const getCoursesWithHierarchy = async (req, res) => {
           courseId: course.courseId,
           name: course.name,
           description: course.description,
+          category: course.category,
           duration: course.duration,
           level: course.level,
           totalHours: course.totalHours,
-          modules: populatedModules.filter(m => m !== null).sort((a, b) => a.sequenceOrder - b.sequenceOrder)
+          subjects: populatedSubjects.filter(s => s !== null).sort((a, b) => a.order - b.order)
         };
       })
     );
@@ -457,8 +498,8 @@ module.exports = {
   createCourse,
   getAllCourses,
   getCourseById,
-  addModuleToCourse,
-  removeModuleFromCourse,
+  addSubjectToCourse,
+  removeSubjectFromCourse,
   updateCourse,
   deleteCourse,
   getCoursesWithHierarchy

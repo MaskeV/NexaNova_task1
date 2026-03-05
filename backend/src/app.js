@@ -1,14 +1,16 @@
-// backend/src/app.js - UPDATED VERSION
+// backend/src/app.js - ADD module routes
 const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const trainerRoutes = require('./routes/trainerRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
+const moduleRoutes = require('./routes/moduleRoutes'); // NEW LINE!
+const courseRoutes = require('./routes/courseRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const timetableRoutes = require('./routes/timetableRoutes');
-const studentRoutes = require('./routes/studentRoutes'); // NEW!
+const studentRoutes = require('./routes/studentRoutes');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
@@ -22,13 +24,16 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to NexaNova Training Management API',
-    version: '2.0.0',
+    version: '3.0.0',
     status: 'Running',
+    hierarchy: 'Course → Subject → Module',  // UPDATED!
     endpoints: {
       auth: '/auth',
       trainers: '/trainer',
+      courses: '/courses',
       subjects: '/subject',
-      students: '/students',  // NEW!
+      modules: '/modules',  // NEW!
+      students: '/students',
       profile: '/profile',
       schedules: '/schedule',
       enrollments: '/enrollments',
@@ -37,12 +42,14 @@ app.get('/', (req, res) => {
     features: {
       authentication: '✅ Complete',
       trainers: '✅ Complete',
-      subjects: '✅ Complete',
-      students: '✅ Complete',      // NEW!
+      courses: '✅ Hierarchical',
+      subjects: '✅ Hierarchical',
+      modules: '✅ New Feature',  // NEW!
+      students: '✅ Complete',
       enrollments: '✅ Complete',
       schedules: '✅ Complete',
       timetables: '✅ Complete',
-      bulkUpload: '✅ CSV/Excel'    // NEW!
+      bulkUpload: '✅ CSV/Excel'
     }
   });
 });
@@ -70,8 +77,10 @@ app.get('/test-db', (req, res) => {
 // API Routes
 app.use('/auth', authRoutes);
 app.use('/trainer', trainerRoutes);
+app.use('/courses', courseRoutes);
 app.use('/subject', subjectRoutes);
-app.use('/students', studentRoutes);     // NEW!
+app.use('/modules', moduleRoutes);  // NEW LINE!
+app.use('/students', studentRoutes);
 app.use('/profile', profileRoutes);
 app.use('/schedule', scheduleRoutes);
 app.use('/enrollments', enrollmentRoutes);

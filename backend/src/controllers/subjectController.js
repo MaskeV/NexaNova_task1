@@ -1,5 +1,6 @@
-// backend/src/controllers/subjectController.js
+// backend/src/controllers/subjectController.js - REPLACE ENTIRE FILE
 const Subject = require('../models/Subject');
+const Module = require('../models/Module');
 const Trainer = require('../models/Trainer');
 
 // Validation helper function
@@ -22,29 +23,13 @@ const validateSubjectData = (data) => {
     errors.name = 'Subject name cannot exceed 100 characters';
   }
 
-  // Validate Description (NOW REQUIRED)
+  // Validate Description
   if (!data.description || !data.description.trim()) {
     errors.description = 'Description is required';
   } else if (data.description.trim().length < 10) {
     errors.description = 'Description must be at least 10 characters long';
   } else if (data.description.trim().length > 500) {
     errors.description = 'Description cannot exceed 500 characters';
-  }
-
-  // Validate Duration (NOW REQUIRED)
-  if (data.duration === undefined || data.duration === null || data.duration === '') {
-    errors.duration = 'Duration is required';
-  } else {
-    const dur = parseInt(data.duration);
-    if (isNaN(dur)) {
-      errors.duration = 'Duration must be a number';
-    } else if (dur < 1) {
-      errors.duration = 'Duration must be at least 1 hour';
-    } else if (dur > 1000) {
-      errors.duration = 'Duration cannot exceed 1000 hours';
-    } else if (!Number.isInteger(dur)) {
-      errors.duration = 'Duration must be a whole number';
-    }
   }
 
   // Validate Level
@@ -61,7 +46,7 @@ const validateSubjectData = (data) => {
 // @route   POST /subject
 const addSubject = async (req, res) => {
   try {
-    const { subjectId, name, description, duration, level, trainers } = req.body;
+    const { subjectId, name, description, level, trainers, modules } = req.body;
 
     console.log('📝 Adding new subject:', { subjectId, name });
 
@@ -85,14 +70,27 @@ const addSubject = async (req, res) => {
       });
     }
 
+    // Validate modules if provided
+    if (modules && modules.length > 0) {
+      for (const moduleRef of modules) {
+        const module = await Module.findOne({ moduleId: moduleRef.moduleId });
+        if (!module) {
+          return res.status(400).json({
+            success: false,
+            message: `Module ${moduleRef.moduleId} not found`
+          });
+        }
+      }
+    }
+
     // Create new subject
     const subject = await Subject.create({
       subjectId: subjectId.trim().toUpperCase(),
       name: name.trim(),
       description: description.trim(),
-      duration: parseInt(duration),
-      level,
-      trainers: trainers || []
+      level: level || 'Beginner',
+      trainers: trainers || [],
+      modules: modules || []
     });
 
     // Update trainers with this subject
@@ -113,7 +111,6 @@ const addSubject = async (req, res) => {
   } catch (error) {
     console.error('❌ Add subject error:', error);
 
-    // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       const errors = {};
       Object.keys(error.errors).forEach(key => {
@@ -137,7 +134,13 @@ const addSubject = async (req, res) => {
 // @route   GET /subject
 const getAllSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.find();
+    const { level, isActive } = req.query;
+    
+    const filter = {};
+    if (level) filter.level = level;
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    
+    const subjects = await Subject.find(filter);
 
     res.status(200).json({
       success: true,
@@ -153,7 +156,7 @@ const getAllSubjects = async (req, res) => {
   }
 };
 
-// @desc    Get subject with all trainers teaching it
+// @desc    Get subject with modules and trainers
 // @route   GET /subject/:id
 const getSubjectWithTrainers = async (req, res) => {
   try {
@@ -161,7 +164,6 @@ const getSubjectWithTrainers = async (req, res) => {
     
     console.log('🔍 Getting subject:', id);
 
-    // Find the subject
     const subject = await Subject.findOne({ subjectId: id });
 
     if (!subject) {
@@ -172,23 +174,148 @@ const getSubjectWithTrainers = async (req, res) => {
       });
     }
 
-    // Find all trainers teaching this subject
+    // Get modules
+    const modules = await Promise.all(
+      subject.modules.map(async (moduleRef) => {
+        const module = await Module.findOne({ moduleId: moduleRef.moduleId });
+        if (!module) return null;
+        
+        return {
+          ...module.toObject(),
+          order: moduleRef.order
+        };
+      })
+    );
+
+    // Get trainers
     const trainers = await Trainer.find({
       empId: { $in: subject.trainers }
     }).select('empId name email phone experience');
 
-    console.log('✅ Subject found:', id, '- Trainers:', trainers.length);
+    console.log('✅ Subject found:', id, '- Modules:', modules.length, '- Trainers:', trainers.length);
 
     res.status(200).json({
       success: true,
       data: {
         subject: subject,
+        modules: modules.filter(m => m !== null).sort((a, b) => a.order - b.order),
         trainers: trainers,
-        trainerCount: trainers.length
+        stats: {
+          moduleCount: modules.filter(m => m !== null).length,
+          trainerCount: trainers.length,
+          totalDuration: subject.totalDuration
+        }
       }
     });
   } catch (error) {
     console.error('❌ Get subject error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Add module to subject
+// @route   POST /subject/:id/modules
+// @access  Admin
+const addModuleToSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { moduleId, order } = req.body;
+    
+    if (!moduleId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Module ID is required'
+      });
+    }
+    
+    // Verify module exists
+    const module = await Module.findOne({ moduleId });
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+    
+    const subject = await Subject.findOne({ subjectId: id });
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subject not found'
+      });
+    }
+    
+    // Check if module already exists
+    const existingModule = subject.modules.find(m => m.moduleId === moduleId);
+    if (existingModule) {
+      return res.status(400).json({
+        success: false,
+        message: 'Module already exists in this subject'
+      });
+    }
+    
+    // Add module
+    subject.modules.push({
+      moduleId,
+      order: order || (subject.modules.length + 1)
+    });
+    
+    await subject.save();
+    
+    console.log('✅ Module added to subject:', subject.subjectId, '→', moduleId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Module added to subject successfully',
+      data: subject
+    });
+  } catch (error) {
+    console.error('❌ Add module error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Remove module from subject
+// @route   DELETE /subject/:id/modules/:moduleId
+// @access  Admin
+const removeModuleFromSubject = async (req, res) => {
+  try {
+    const { id, moduleId } = req.params;
+    
+    const subject = await Subject.findOne({ subjectId: id });
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subject not found'
+      });
+    }
+    
+    const moduleIndex = subject.modules.findIndex(m => m.moduleId === moduleId);
+    if (moduleIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found in this subject'
+      });
+    }
+    
+    subject.modules.splice(moduleIndex, 1);
+    await subject.save();
+    
+    console.log('✅ Module removed from subject:', subject.subjectId, '→', moduleId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Module removed from subject successfully',
+      data: subject
+    });
+  } catch (error) {
+    console.error('❌ Remove module error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -201,7 +328,7 @@ const getSubjectWithTrainers = async (req, res) => {
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, duration, level, trainers } = req.body;
+    const { name, description, level, trainers, modules, isActive } = req.body;
 
     console.log('✏️ Updating subject:', id);
 
@@ -210,7 +337,6 @@ const updateSubject = async (req, res) => {
       subjectId: 'SB01', // Dummy value for validation
       name, 
       description, 
-      duration, 
       level 
     });
     delete validationErrors.subjectId; // Remove subjectId error
@@ -223,7 +349,6 @@ const updateSubject = async (req, res) => {
       });
     }
 
-    // Find the subject
     const subject = await Subject.findOne({ subjectId: id });
 
     if (!subject) {
@@ -240,9 +365,10 @@ const updateSubject = async (req, res) => {
     // Update subject fields
     if (name) subject.name = name.trim();
     if (description) subject.description = description.trim();
-    if (duration !== undefined) subject.duration = parseInt(duration);
     if (level) subject.level = level;
     if (trainers !== undefined) subject.trainers = trainers;
+    if (modules !== undefined) subject.modules = modules;
+    if (isActive !== undefined) subject.isActive = isActive;
 
     await subject.save();
 
@@ -282,7 +408,6 @@ const updateSubject = async (req, res) => {
   } catch (error) {
     console.error('❌ Update subject error:', error);
 
-    // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       const errors = {};
       Object.keys(error.errors).forEach(key => {
@@ -320,6 +445,20 @@ const deleteSubject = async (req, res) => {
       });
     }
 
+    // Check if subject is used in any course
+    const Course = require('../models/Course');
+    const usedInCourses = await Course.find({
+      'subjects.subjectId': id
+    }).select('courseId name');
+    
+    if (usedInCourses.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete subject. It is used in ${usedInCourses.length} course(s)`,
+        courses: usedInCourses
+      });
+    }
+
     // Remove subject from all trainers
     if (subject.trainers && subject.trainers.length > 0) {
       console.log('🔄 Removing subject from trainers:', subject.trainers);
@@ -351,6 +490,8 @@ module.exports = {
   addSubject,
   getAllSubjects,
   getSubjectWithTrainers,
+  addModuleToSubject,
+  removeModuleFromSubject,
   updateSubject,
   deleteSubject
 };

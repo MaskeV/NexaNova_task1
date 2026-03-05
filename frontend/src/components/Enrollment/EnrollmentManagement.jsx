@@ -64,32 +64,32 @@ const EnrollmentManagement = () => {
     }
   };
 
-  const handleEnrollStudent = async (enrollmentData) => {
-    try {
-      if (enrollmentData.studentIds && enrollmentData.studentIds.length > 1) {
-        // Bulk enrollment
-        await bulkEnrollStudents({
-          studentIds: enrollmentData.studentIds,
-          courseId: enrollmentData.courseId
-        });
-        toast.success(`${enrollmentData.studentIds.length} students enrolled successfully!`);
-      } else {
-        // Single enrollment
-        await enrollStudent({
-          studentId: enrollmentData.studentId || enrollmentData.studentIds[0],
-          courseId: enrollmentData.courseId
-        });
-        toast.success('Student enrolled successfully!');
-      }
-      
-      setShowEnrollForm(false);
-      await fetchData();
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to enroll student';
-      toast.error(message);
+  // frontend/src/components/Enrollment/EnrollmentManagement.jsx - UPDATE handleEnrollStudent method
+const handleEnrollStudent = async (enrollmentData) => {
+  try {
+    if (enrollmentData.studentEmails && enrollmentData.studentEmails.length > 1) {
+      // Bulk enrollment
+      await bulkEnrollStudents({
+        studentEmails: enrollmentData.studentEmails,
+        courseId: enrollmentData.courseId
+      });
+      toast.success(`${enrollmentData.studentEmails.length} students enrolled successfully!`);
+    } else {
+      // Single enrollment
+      await enrollStudent({
+        studentEmail: enrollmentData.studentEmails[0],
+        courseId: enrollmentData.courseId
+      });
+      toast.success('Student enrolled successfully!');
     }
-  };
-
+    
+    setShowEnrollForm(false);
+    await fetchData();
+  } catch (error) {
+    const message = error.response?.data?.message || 'Failed to enroll student';
+    toast.error(message);
+  }
+};
   const handleDeleteEnrollment = async (enrollmentId) => {
     if (!window.confirm('Are you sure you want to remove this enrollment?')) {
       return;

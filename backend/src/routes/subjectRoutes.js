@@ -1,31 +1,31 @@
-// backend/src/routes/subjectRoutes.js
+// backend/src/routes/subjectRoutes.js - REPLACE ENTIRE FILE
 const express = require('express');
 const router = express.Router();
 const {
   addSubject,
   getAllSubjects,
   getSubjectWithTrainers,
+  addModuleToSubject,
+  removeModuleFromSubject,
   updateSubject,
   deleteSubject
 } = require('../controllers/subjectController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// Logging middleware for debugging
+// Logging middleware
 router.use((req, res, next) => {
   console.log(`📘 Subject Route: ${req.method} ${req.path}`);
   next();
 });
 
-// Public routes - NO authentication required
+// Public routes
 router.get('/', getAllSubjects);
-
-// UPDATED: Protected routes - Require authentication and admin role
-router.post('/', protect, authorize('admin'), addSubject);
-
-// Public route - Get single subject with trainers
 router.get('/:id', getSubjectWithTrainers);
 
-// UPDATED: Protected routes - Require authentication and admin role
+// Protected routes (Admin only)
+router.post('/', protect, authorize('admin'), addSubject);
+router.post('/:id/modules', protect, authorize('admin'), addModuleToSubject);
+router.delete('/:id/modules/:moduleId', protect, authorize('admin'), removeModuleFromSubject);
 router.put('/:id', protect, authorize('admin'), updateSubject);
 router.delete('/:id', protect, authorize('admin'), deleteSubject);
 

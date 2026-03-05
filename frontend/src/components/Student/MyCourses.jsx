@@ -12,24 +12,25 @@ const MyCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?._id) {
-      fetchCourses();
-    }
-  }, [user]);
+// frontend/src/components/Student/MyCourses.jsx - UPDATE useEffect
+useEffect(() => {
+  if (user?.email) {  // Changed from user?._id to user?.email
+    fetchCourses();
+  }
+}, [user]);
 
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const response = await getStudentCourses(user._id);
-      setCourses(response.data);
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to load courses';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchCourses = async () => {
+  try {
+    setLoading(true);
+    const response = await getStudentCourses(user.email);  // Changed from user._id to user.email
+    setCourses(response.data);
+  } catch (error) {
+    const message = error.response?.data?.message || 'Failed to load courses';
+    toast.error(message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getLevelColor = (level) => {
     switch (level?.toLowerCase()) {

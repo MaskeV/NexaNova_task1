@@ -1,4 +1,4 @@
-// backend/src/models/Course.js
+// backend/src/models/Course.js - REPLACE ENTIRE FILE
 const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema({
@@ -29,9 +29,31 @@ const courseSchema = new mongoose.Schema({
     minlength: [10, 'Description must be at least 10 characters'],
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
+  category: {
+    type: String,
+    required: [true, 'Category is required'],
+    enum: {
+      values: ['Frontend', 'Backend', 'DevOps', 'Mobile', 'Data Science', 'Cloud', 'Security', 'Other'],
+      message: 'Invalid category'
+    },
+    default: 'Other'
+  },
+  // Subjects that are part of this course
+  subjects: [{
+    subjectId: {
+      type: String,
+      required: true,
+      ref: 'Subject'
+    },
+    order: {
+      type: Number,
+      required: true,
+      default: 0
+    }
+  }],
   duration: {
     type: Number,
-    required: [true, 'Duration is required'],
+    required: [true, 'Duration (in weeks) is required'],
     min: [1, 'Duration must be at least 1 week'],
     max: [104, 'Duration cannot exceed 104 weeks (2 years)'],
     validate: {
@@ -41,33 +63,28 @@ const courseSchema = new mongoose.Schema({
       message: 'Duration must be a whole number (in weeks)'
     }
   },
-  level: {
-    type: String,
-    required: [true, 'Level is required'],
-    enum: {
-      values: ['Beginner', 'Intermediate', 'Advanced'],
-      message: 'Level must be Beginner, Intermediate, or Advanced'
-    },
-    default: 'Beginner'
-  },
-  // Array of Subject IDs (modules) that are part of this course
-  modules: [{
-    subjectId: {
-      type: String,
-      required: true,
-      ref: 'Subject'
-    },
-    sequenceOrder: {
-      type: Number,
-      required: true,
-      min: 1
-    }
-  }],
-  // Total hours calculated from all modules
+  // Total hours calculated from all subjects
   totalHours: {
     type: Number,
     default: 0
   },
+  level: {
+    type: String,
+    required: [true, 'Level is required'],
+    enum: {
+      values: ['Beginner', 'Intermediate', 'Advanced', 'Mixed'],
+      message: 'Level must be Beginner, Intermediate, Advanced, or Mixed'
+    },
+    default: 'Beginner'
+  },
+  prerequisites: [{
+    type: String,
+    trim: true
+  }],
+  outcomes: [{
+    type: String,
+    trim: true
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -80,20 +97,26 @@ const courseSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
+// Indexes
 courseSchema.index({ courseId: 1 });
 courseSchema.index({ name: 1 });
+courseSchema.index({ category: 1 });
 courseSchema.index({ isActive: 1 });
 
-// Method to calculate total hours from modules
+// Method to calculate total hours from subjects
 courseSchema.methods.calculateTotalHours = async function() {
   const Subject = require('./Subject');
   let total = 0;
   
-  for (const module of this.modules) {
-    const subject = await Subject.findOne({ subjectId: module.subjectId });
+  for (const subjectRef of this.subjects) {
+    const subject = await Subject.findOne({ subjectId: subjectRef.subjectId });
     if (subject) {
-      total += subject.duration || 0;
+      // Recalculate subject duration if needed
+      if (!subject.totalDuration || subject.totalDuration === 0) {
+        await subject.calculateTotalDuration();
+        await subject.save();
+      }
+      total += subject.totalDuration || 0;
     }
   }
   
@@ -101,17 +124,17 @@ courseSchema.methods.calculateTotalHours = async function() {
   return total;
 };
 
-// Virtual to get module count
-courseSchema.virtual('moduleCount').get(function() {
-  return this.modules ? this.modules.length : 0;
+// Virtual to get subject count
+courseSchema.virtual('subjectCount').get(function() {
+  return this.subjects ? this.subjects.length : 0;
 });
 
 // Pre-save hook to calculate total hours
 courseSchema.pre('save', async function(next) {
-  if (this.isModified('modules')) {
+  if (this.isModified('subjects')) {
     await this.calculateTotalHours();
   }
-  next();
+ 
 });
 
 module.exports = mongoose.model('Course', courseSchema);
