@@ -1,49 +1,42 @@
-// frontend/src/services/enrollmentService.js - REPLACE ENTIRE FILE
+// frontend/src/services/enrollmentService.js
 import api from './api';
 
 const ENROLLMENT_BASE = '/enrollments';
 
-// Get all students (for admin) - Now returns actual user data
+// Get all students (for admin)
 export const getAllStudents = async () => {
   try {
-    // Fetch users with student role
-    const response = await api.get('/auth/users?role=student');
+    const response = await api.get('/auth/users');
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Enroll a single student by email
+// Enroll a single student
 export const enrollStudent = async (enrollmentData) => {
   try {
-    const response = await api.post(ENROLLMENT_BASE, {
-      studentEmail: enrollmentData.studentEmail,
-      courseId: enrollmentData.courseId
-    });
+    const response = await api.post(ENROLLMENT_BASE, enrollmentData);
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Bulk enroll students by emails
+// Bulk enroll students
 export const bulkEnrollStudents = async (enrollmentData) => {
   try {
-    const response = await api.post(`${ENROLLMENT_BASE}/bulk`, {
-      studentEmails: enrollmentData.studentEmails,
-      courseId: enrollmentData.courseId
-    });
+    const response = await api.post(`${ENROLLMENT_BASE}/bulk`, enrollmentData);
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-// Get student's courses by email
-export const getStudentCourses = async (studentEmail) => {
+// Get student's courses
+export const getStudentCourses = async (studentId) => {
   try {
-    const response = await api.get(`${ENROLLMENT_BASE}/student/${studentEmail}/courses`);
+    const response = await api.get(`${ENROLLMENT_BASE}/student/${studentId}/courses`);
     return response.data;
   } catch (error) {
     throw error;

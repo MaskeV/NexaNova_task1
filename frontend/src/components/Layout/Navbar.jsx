@@ -47,12 +47,12 @@ const Navbar = () => {
                 >
                   Trainers
                 </Link>
-                <Link 
-                  to="/subjects" 
-                  className={`nav-link ${isActive('/subjects') ? 'active' : ''}`}
-                >
-                  Subjects
-                </Link>
+               <Link 
+  to="/courses" 
+  className={`nav-link ${isActive('/courses') ? 'active' : ''}`}
+>
+  Courses
+</Link>
                 <Link 
                   to="/schedules" 
                   className={`nav-link ${isActive('/schedules') ? 'active' : ''}`}

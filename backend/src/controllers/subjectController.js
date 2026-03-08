@@ -132,15 +132,15 @@ const addSubject = async (req, res) => {
 
 // @desc    Get all subjects
 // @route   GET /subject
+// backend/src/controllers/subjectController.js
+
+// Replace getAllSubjects function
 const getAllSubjects = async (req, res) => {
   try {
-    const { level, isActive } = req.query;
-    
-    const filter = {};
-    if (level) filter.level = level;
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
-    
-    const subjects = await Subject.find(filter);
+    const subjects = await Subject.find()
+      .populate('trainers', 'name empId email experience')
+      .populate('modules') // Populate module references
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -148,7 +148,7 @@ const getAllSubjects = async (req, res) => {
       data: subjects
     });
   } catch (error) {
-    console.error('❌ Get all subjects error:', error);
+    console.error('Error in getAllSubjects:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -156,6 +156,34 @@ const getAllSubjects = async (req, res) => {
   }
 };
 
+// Replace getSubjectById function
+const getSubjectById = async (req, res) => {
+  try {
+    const { subjectId } = req.params;
+
+    const subject = await Subject.findOne({ subjectId })
+      .populate('trainers', 'name empId email experience')
+      .populate('modules'); // Populate module references
+
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subject not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: subject
+    });
+  } catch (error) {
+    console.error('Error in getSubjectById:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 // @desc    Get subject with modules and trainers
 // @route   GET /subject/:id
 const getSubjectWithTrainers = async (req, res) => {

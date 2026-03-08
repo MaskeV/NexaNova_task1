@@ -13,7 +13,7 @@ const {
   verifyResetCode,
   resetPassword
 } = require('../controllers/passwordResetController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Public routes
 router.post('/register', register);
@@ -28,5 +28,23 @@ router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
 router.put('/password', protect, updatePassword);
 router.post('/logout', protect, logout);
+
+// NEW: Get all users (admin only) - for enrollment
+router.get('/users', protect, authorize('admin'), async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const users = await User.find({ role: 'student' }).select('-password');
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 
 module.exports = router;

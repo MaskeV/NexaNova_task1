@@ -11,6 +11,12 @@ import '../../styles/pages/Profile.css';
 const MyProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Check user role first
+  const isAdmin = user?.role === 'admin';
+  const isTrainer = user?.role === 'trainer';
+  const isStudent = user?.role === 'student';
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
@@ -329,7 +335,7 @@ const MyProfile = () => {
 
 
 
-// Then update the admin view section (around line 210):
+// Admin users - don't need profiles
 if (isAdmin) {
   return (
     <div className="profile-container">
@@ -337,9 +343,19 @@ if (isAdmin) {
         <h1>My Profile</h1>
       </div>
       <div className="admin-info-card card">
-        <div className="admin-badge-large">ADMIN</div>
+        <div className="admin-badge-large" style={{
+          fontSize: '3rem',
+          color: '#ff6b6b',
+          textAlign: 'center',
+          padding: '2rem',
+          background: 'linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%)',
+          borderRadius: '12px',
+          marginBottom: '1.5rem'
+        }}>
+          ADMIN
+        </div>
         <div className="admin-details">
-          <h2>Administrator Account</h2>
+          <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>Administrator Account</h2>
           <div className="detail-row">
             <span className="detail-label">Username:</span>
             <span className="detail-value">{user?.username || 'Admin'}</span>
@@ -353,9 +369,45 @@ if (isAdmin) {
             <span className="detail-value">Administrator</span>
           </div>
         </div>
-        <div className="admin-info-message">
-          <p>ℹ️ As an administrator, you don't need a trainer profile. You can manage trainers and subjects from the respective pages.</p>
+        <div className="admin-info-message" style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          background: '#e3f2fd',
+          borderRadius: '8px',
+          borderLeft: '4px solid #2196f3'
+        }}>
+          <p style={{ margin: 0, color: '#0d47a1' }}>
+            ℹ️ As an administrator, you don't need a trainer profile. 
+            You can manage trainers and subjects from the respective pages.
+          </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Students - redirect them
+if (isStudent) {
+  return (
+    <div className="profile-container">
+      <div className="page-header">
+        <h1>Access Denied</h1>
+      </div>
+      <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+        <h2 style={{ color: '#ff9800', marginBottom: '1rem' }}>⚠️ Trainer Profile Only</h2>
+        <p style={{ color: '#666', marginTop: '1rem', fontSize: '1.1rem' }}>
+          Only users with the Trainer role can create and manage profiles.
+        </p>
+        <p style={{ color: '#666', marginTop: '0.5rem' }}>
+          Students can enroll in courses from the My Courses page.
+        </p>
+        <button 
+          onClick={() => navigate('/my-courses')}
+          className="btn btn-primary"
+          style={{ marginTop: '2rem' }}
+        >
+          Go to My Courses
+        </button>
       </div>
     </div>
   );

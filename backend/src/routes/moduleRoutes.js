@@ -1,45 +1,28 @@
-// backend/src/routes/enrollmentRoutes.js - REPLACE ENTIRE FILE
+// backend/src/routes/moduleRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
-  enrollStudent,
-  bulkEnrollStudents,
-  getStudentCourses,
-  getCourseEnrollments,
-  getAllEnrollments,
-  updateEnrollmentStatus,
-  deleteEnrollment
-} = require('../controllers/enrollmentController');
+  createModule,
+  getAllModules,
+  getModuleById,
+  updateModule,
+  deleteModule
+} = require('../controllers/moduleController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// Logging middleware for debugging
+// Logging middleware
 router.use((req, res, next) => {
-  console.log(`📚 Enrollment Route: ${req.method} ${req.path}`);
+  console.log(`📦 Module Route: ${req.method} ${req.path}`);
   next();
 });
 
-// All routes require authentication
-router.use(protect);
+// Public routes
+router.get('/', getAllModules);
+router.get('/:id', getModuleById);
 
-// POST enroll a single student (Admin only)
-router.post('/', authorize('admin'), enrollStudent);
-
-// POST bulk enroll students (Admin only)
-router.post('/bulk', authorize('admin'), bulkEnrollStudents);
-
-// GET all enrollments (Admin only)
-router.get('/', authorize('admin'), getAllEnrollments);
-
-// GET student's courses by email (Student can view own, Admin can view all)
-router.get('/student/:studentEmail/courses', authorize('student', 'admin'), getStudentCourses);
-
-// GET course enrollments (Admin only)
-router.get('/course/:courseId', authorize('admin'), getCourseEnrollments);
-
-// PUT update enrollment status (Admin only)
-router.put('/:enrollmentId', authorize('admin'), updateEnrollmentStatus);
-
-// DELETE enrollment (Admin only)
-router.delete('/:enrollmentId', authorize('admin'), deleteEnrollment);
+// Protected routes (Admin only)
+router.post('/', protect, authorize('admin'), createModule);
+router.put('/:id', protect, authorize('admin'), updateModule);
+router.delete('/:id', protect, authorize('admin'), deleteModule);
 
 module.exports = router;

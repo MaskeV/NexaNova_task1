@@ -14,6 +14,8 @@ import Dashboard from './components/DashBoard/DashBoard';
 import TrainerList from './components/Trainers/TrainerList';
 import SubjectList from './components/Subjects/SubjectList';
 import MyProfile from './components/Profile/MyProfile';
+import CourseList from './components/Courses/CourseList';
+
 
 // Schedule Components (Admin only)
 import ScheduleManagement from './components/Schedule/ScheduleManagement';
@@ -97,6 +99,11 @@ function AppContent() {
               </PrivateRoute>
             } />
             
+            <Route path="/courses" element={
+  <PrivateRoute>
+    <CourseList />
+  </PrivateRoute>
+} />
             <Route path="/schedules" element={
               <PrivateRoute>
                 <RoleBasedRoute allowedRoles={['admin']}>
