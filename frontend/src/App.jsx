@@ -91,7 +91,7 @@ function AppContent() {
               </PrivateRoute>
             } />
             
-            <Route path="/subjects" element={
+            <Route path="/subject" element={
               <PrivateRoute>
                 <RoleBasedRoute allowedRoles={['admin']}>
                   <SubjectList />

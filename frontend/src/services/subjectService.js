@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from '../utils/constants';
 export const getAllSubjects = async () => {
   try {
     console.log('📘 Fetching all subjects...');
-    const response = await api.get(API_ENDPOINTS.SUBJECTS);
+    const response = await api.get(API_ENDPOINTS.SUBJECT);
     console.log('✅ Subjects fetched:', response.data.count);
     return response.data;
   } catch (error) {

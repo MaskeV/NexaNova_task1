@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { updateSubject } from '../../services/subjectService';
 import { getAllTrainers } from '../../services/trainerService';
+import { getAllModules } from '../../services/moduleService';
 import { SUBJECT_LEVELS } from '../../utils/constants';
 import { toast } from 'react-toastify';
 import MultiSelectDropdown from '../Common/MultiSelectDropdown';
@@ -11,20 +12,19 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
     name: subject.name || '',
     description: subject.description || '',
-    duration: subject.duration || '',
     level: subject.level || 'Beginner',
-    trainers: subject.trainers || []
+    trainers: subject.trainers || [],
+    modules: subject.modules || []
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [availableTrainers, setAvailableTrainers] = useState([]);
+  const [availableModules, setAvailableModules] = useState([]);
   const [loadingTrainers, setLoadingTrainers] = useState(true);
+  const [loadingModules, setLoadingModules] = useState(true);
 
-  // Scroll to top when component mounts (edit form opens)
   useEffect(() => {
-    // Multiple scroll strategies for better compatibility
     const scrollToTop = () => {
-      // Strategy 1: Scroll to form element
       if (formRef.current) {
         formRef.current.scrollIntoView({ 
           behavior: 'smooth', 
@@ -32,39 +32,37 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
           inline: 'nearest'
         });
       }
-      
-      // Strategy 2: Scroll window to top
-      window.scrollTo({ 
-        top: 0, 
-        left: 0,
-        behavior: 'smooth' 
-      });
-      
-      // Strategy 3: Scroll document body
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     };
 
-    // Execute scroll with slight delay to ensure DOM is ready
     const timer = setTimeout(scrollToTop, 100);
-    
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    fetchAvailableTrainers();
+    fetchAvailableData();
   }, []);
 
-  const fetchAvailableTrainers = async () => {
+  const fetchAvailableData = async () => {
     try {
       setLoadingTrainers(true);
-      const response = await getAllTrainers();
-      setAvailableTrainers(response.data);
+      setLoadingModules(true);
+      
+      const [trainersResponse, modulesResponse] = await Promise.all([
+        getAllTrainers(),
+        getAllModules()
+      ]);
+      
+      setAvailableTrainers(trainersResponse.data || []);
+      setAvailableModules(modulesResponse.data || []);
     } catch (error) {
-      console.error('Failed to fetch trainers:', error);
-      toast.error('Failed to load trainers');
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load trainers and modules');
     } finally {
       setLoadingTrainers(false);
+      setLoadingModules(false);
     }
   };
 
@@ -98,6 +96,23 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
     }
   };
 
+  const handleModulesChange = (selectedModules) => {
+    setFormData({
+      ...formData,
+      modules: selectedModules.map((moduleId, index) => ({
+        moduleId,
+        order: index + 1
+      }))
+    });
+    
+    if (errors.modules) {
+      setErrors({
+        ...errors,
+        modules: ''
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -109,9 +124,9 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
       const subjectData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        duration: parseInt(formData.duration) || 0,
         level: formData.level,
-        trainers: formData.trainers
+        trainers: formData.trainers,
+        modules: formData.modules
       };
 
       console.log('📤 Updating subject:', subject.subjectId, subjectData);
@@ -144,11 +159,21 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
     extra: `${trainer.experience} years experience`
   }));
 
+  // Transform modules for dropdown
+  const moduleOptions = availableModules.map(module => ({
+    id: module.moduleId,
+    name: module.name,
+    extra: `${module.duration} hours`
+  }));
+
+  // Get selected module IDs for MultiSelect
+  const selectedModuleIds = formData.modules.map(m => m.moduleId);
+
   return (
     <div ref={formRef} className="edit-subject-form card">
       <div className="form-header">
         <h2>✏️ Edit Subject - {subject.subjectId}</h2>
-        <p className="form-subtitle">Update the subject details below</p>
+        <p className="form-subtitle">Update the subject details, assign trainers, and manage modules</p>
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
@@ -201,43 +226,25 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
           </small>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label>Duration (hours) *</label>
-            <input
-              type="number"
-              name="duration"
-              className={`form-control ${errors.duration ? 'error' : ''}`}
-              placeholder="60"
-              min="1"
-              max="1000"
-              value={formData.duration}
-              onChange={handleChange}
-              required
-            />
-            {errors.duration && <span className="error-text">{errors.duration}</span>}
-            <small className="input-hint">1-1000 hours</small>
-          </div>
-
-          <div className="form-group">
-            <label>Level *</label>
-            <select
-              name="level"
-              className={`form-control ${errors.level ? 'error' : ''}`}
-              value={formData.level}
-              onChange={handleChange}
-            >
-              {SUBJECT_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-            {errors.level && <span className="error-text">{errors.level}</span>}
-          </div>
+        <div className="form-group">
+          <label>Level *</label>
+          <select
+            name="level"
+            className={`form-control ${errors.level ? 'error' : ''}`}
+            value={formData.level}
+            onChange={handleChange}
+          >
+            {SUBJECT_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+          {errors.level && <span className="error-text">{errors.level}</span>}
         </div>
 
         <div className="form-group">
+          <label className="section-label">👨‍🏫 Assign Trainers</label>
           {loadingTrainers ? (
             <div className="loading-state">
               <div className="spinner-small"></div>
@@ -245,7 +252,7 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
             </div>
           ) : (
             <MultiSelectDropdown
-              label="Assign Trainers (Optional)"
+              label="Select Trainers (Optional)"
               options={trainerOptions}
               selectedValues={formData.trainers}
               onChange={handleTrainersChange}
@@ -254,6 +261,28 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
               searchable={true}
             />
           )}
+          <small className="input-hint">Trainers who will teach this subject</small>
+        </div>
+
+        <div className="form-group">
+          <label className="section-label">📦 Assign Modules</label>
+          {loadingModules ? (
+            <div className="loading-state">
+              <div className="spinner-small"></div>
+              <span>Loading modules...</span>
+            </div>
+          ) : (
+            <MultiSelectDropdown
+              label="Select Modules (Optional)"
+              options={moduleOptions}
+              selectedValues={selectedModuleIds}
+              onChange={handleModulesChange}
+              placeholder="Search and select modules..."
+              error={errors.modules}
+              searchable={true}
+            />
+          )}
+          <small className="input-hint">Modules included in this subject (order will be preserved)</small>
         </div>
 
         <div className="form-actions">
@@ -293,6 +322,14 @@ const EditSubject = ({ subject, onSuccess, onCancel }) => {
           margin: 0;
           color: #666;
           font-size: 0.95rem;
+        }
+
+        .section-label {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #333;
+          margin-bottom: 0.75rem;
+          display: block;
         }
 
         .input-hint {

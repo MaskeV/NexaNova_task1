@@ -63,7 +63,7 @@ enrollmentSchema.pre('save', async function(next) {
       throw new Error('Student is already enrolled in this course');
     }
   }
-  next();
+  
 });
 
 module.exports = mongoose.model('Enrollment', enrollmentSchema);

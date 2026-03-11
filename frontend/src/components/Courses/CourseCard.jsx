@@ -1,10 +1,11 @@
 // frontend/src/components/Courses/CourseCard.jsx
 import React, { useState } from 'react';
-import { FaBook, FaClock, FaChartLine, FaChevronDown, FaChevronUp, FaUsers, FaEdit, FaTrash, FaLayerGroup } from 'react-icons/fa';
+import { FaBook, FaClock, FaChartLine, FaChevronDown, FaChevronUp, FaUsers, FaEdit, FaTrash, FaLayerGroup, FaCheckCircle, FaBullseye, FaFileAlt } from 'react-icons/fa';
 
 const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = false }) => {
   const [showSubjects, setShowSubjects] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState({});
+  const [expandedModules, setExpandedModules] = useState({});
 
   const getLevelColor = (level) => {
     switch (level?.toLowerCase()) {
@@ -22,7 +23,13 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
     }));
   };
 
-  const levelColors = getLevelColor(course.level);
+  const toggleModuleDetails = (moduleId) => {
+    setExpandedModules(prev => ({
+      ...prev,
+      [moduleId]: !prev[moduleId]
+    }));
+  };
+
   const subjectCount = course.subjects?.length || 0;
   
   // Calculate total modules across all subjects
@@ -57,8 +64,8 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
             <span 
               className="level-badge"
               style={{
-                background: levelColors.bg,
-                color: levelColors.color
+                background: getLevelColor(course.level).bg,
+                color: getLevelColor(course.level).color
               }}
             >
               {course.level}
@@ -164,14 +171,15 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
                             {isExpanded && (
                               <div className="modules-list">
                                 {subject.modules
-                                  .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+                                  .sort((a, b) => (a.order || 0) - (b.order || 0))
                                   .map((module, mIndex) => {
-                                    const moduleLevelColors = getLevelColor(module.level);
+                                    const isModuleExpanded = expandedModules[module.moduleId];
+                                    
                                     return (
                                       <div key={module.moduleId || mIndex} className="module-item">
-                                        <div className="module-header">
-                                          <div className="module-number">{module.sequenceOrder || mIndex + 1}</div>
-                                          <div className="module-content">
+                                        <div className="module-header-row">
+                                          <div className="module-number">{module.order || mIndex + 1}</div>
+                                          <div className="module-title-wrapper">
                                             <div className="module-title">
                                               <strong>{module.name}</strong>
                                               <span className="module-id">{module.moduleId}</span>
@@ -188,20 +196,105 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
                                                   {module.duration} hours
                                                 </span>
                                               )}
-                                              {module.level && (
-                                                <span 
-                                                  className="meta-tag level-tag"
-                                                  style={{
-                                                    background: moduleLevelColors.bg,
-                                                    color: moduleLevelColors.color
-                                                  }}
-                                                >
-                                                  {module.level}
+                                              {module.isActive !== undefined && (
+                                                <span className="meta-tag status-tag" style={{
+                                                  background: module.isActive ? '#e8f5e9' : '#ffebee',
+                                                  color: module.isActive ? '#2e7d32' : '#c62828'
+                                                }}>
+                                                  {module.isActive ? '✓ Active' : '✗ Inactive'}
                                                 </span>
                                               )}
                                             </div>
                                           </div>
                                         </div>
+
+                                        {/* Module Details Toggle */}
+                                        {(module.content || module.learningObjectives?.length > 0 || module.prerequisites?.length > 0) && (
+                                          <>
+                                            <button 
+                                              className="btn-toggle-module-details"
+                                              onClick={() => toggleModuleDetails(module.moduleId)}
+                                              type="button"
+                                            >
+                                              {isModuleExpanded ? (
+                                                <>
+                                                  <FaChevronUp /> Hide Details
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <FaChevronDown /> Show Details
+                                                </>
+                                              )}
+                                            </button>
+
+                                            {isModuleExpanded && (
+                                              <div className="module-details">
+                                                {/* Content */}
+                                                {module.content && (
+                                                  <div className="detail-section">
+                                                    <div className="detail-header">
+                                                      <FaFileAlt size={14} />
+                                                      <strong>Content</strong>
+                                                    </div>
+                                                    <p className="detail-text">{module.content}</p>
+                                                  </div>
+                                                )}
+
+                                                {/* Learning Objectives */}
+                                                {module.learningObjectives && module.learningObjectives.length > 0 && (
+                                                  <div className="detail-section">
+                                                    <div className="detail-header">
+                                                      <FaBullseye size={14} />
+                                                      <strong>Learning Objectives</strong>
+                                                    </div>
+                                                    <ul className="detail-list">
+                                                      {module.learningObjectives.map((objective, idx) => (
+                                                        <li key={idx}>
+                                                          <FaCheckCircle size={12} />
+                                                          <span>{objective}</span>
+                                                        </li>
+                                                      ))}
+                                                    </ul>
+                                                  </div>
+                                                )}
+
+                                                {/* Prerequisites */}
+                                                {module.prerequisites && module.prerequisites.length > 0 && (
+                                                  <div className="detail-section">
+                                                    <div className="detail-header">
+                                                      <FaLayerGroup size={14} />
+                                                      <strong>Prerequisites</strong>
+                                                    </div>
+                                                    <ul className="detail-list">
+                                                      {module.prerequisites.map((prereq, idx) => (
+                                                        <li key={idx}>
+                                                          <span>{prereq}</span>
+                                                        </li>
+                                                      ))}
+                                                    </ul>
+                                                  </div>
+                                                )}
+
+                                                {/* Resources */}
+                                                {module.resources && module.resources.length > 0 && (
+                                                  <div className="detail-section">
+                                                    <div className="detail-header">
+                                                      <FaBook size={14} />
+                                                      <strong>Resources</strong>
+                                                    </div>
+                                                    <ul className="detail-list">
+                                                      {module.resources.map((resource, idx) => (
+                                                        <li key={idx}>
+                                                          <span>{resource}</span>
+                                                        </li>
+                                                      ))}
+                                                    </ul>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -346,7 +439,8 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
         }
 
         .btn-toggle-subjects,
-        .btn-toggle-modules {
+        .btn-toggle-modules,
+        .btn-toggle-module-details {
           width: 100%;
           padding: 0.875rem 1rem;
           background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -364,7 +458,8 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
         }
 
         .btn-toggle-subjects:hover,
-        .btn-toggle-modules:hover {
+        .btn-toggle-modules:hover,
+        .btn-toggle-module-details:hover {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           border-color: #667eea;
@@ -378,6 +473,14 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
           font-size: 0.875rem;
           background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
           border: 1px solid #d0d0d0;
+        }
+
+        .btn-toggle-module-details {
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          font-size: 0.8rem;
+          background: #fff;
+          border: 1px solid #c0c0c0;
         }
 
         .subjects-list {
@@ -503,6 +606,11 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
           background: #f0f4ff;
         }
 
+        .status-tag {
+          font-weight: 600;
+          border: none;
+        }
+
         .modules-list {
           margin-top: 0.75rem;
           display: flex;
@@ -520,7 +628,7 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
           box-shadow: 0 1px 4px rgba(102, 126, 234, 0.08);
         }
 
-        .module-header {
+        .module-header-row {
           display: flex;
           gap: 0.75rem;
         }
@@ -539,7 +647,7 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
           font-size: 0.875rem;
         }
 
-        .module-content {
+        .module-title-wrapper {
           flex: 1;
         }
 
@@ -582,6 +690,71 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
         .module-meta .meta-tag {
           font-size: 0.8rem;
           padding: 0.25rem 0.6rem;
+        }
+
+        /* Module Details Section */
+        .module-details {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+          border-radius: 6px;
+          border: 1px solid #e0e7ff;
+          animation: slideDown 0.3s ease;
+        }
+
+        .detail-section {
+          margin-bottom: 1rem;
+        }
+
+        .detail-section:last-child {
+          margin-bottom: 0;
+        }
+
+        .detail-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #4338ca;
+          font-weight: 600;
+          font-size: 0.9rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .detail-header svg {
+          color: #667eea;
+        }
+
+        .detail-text {
+          color: #555;
+          font-size: 0.875rem;
+          line-height: 1.6;
+          margin: 0;
+          padding-left: 1.5rem;
+        }
+
+        .detail-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .detail-list li {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          color: #555;
+          font-size: 0.875rem;
+          line-height: 1.5;
+          padding-left: 1.5rem;
+        }
+
+        .detail-list li svg {
+          color: #4caf50;
+          flex-shrink: 0;
+          margin-top: 0.25rem;
         }
 
         .course-card-footer {
@@ -641,6 +814,11 @@ const CourseCard = ({ course, onEdit, onDelete, canEdit = false, canDelete = fal
 
           .modules-list {
             padding-left: 0.5rem;
+          }
+
+          .detail-text,
+          .detail-list li {
+            padding-left: 0;
           }
         }
       `}</style>

@@ -6,11 +6,9 @@ import {
   enrollStudent, 
   bulkEnrollStudents,
   deleteEnrollment,
-  updateEnrollmentStatus,
-  getCourseEnrollments
+  updateEnrollmentStatus
 } from '../../services/enrollmentService';
-import { getAllSubjects } from '../../services/subjectService';
-import { getAllStudents } from '../../services/enrollmentService';
+import { getAllCourses } from '../../services/courseServices';
 import Loading from '../Common/Loading';
 import EnrollStudentForm from './EnrollStudentForm';
 import EnrollmentList from './EnrollmentList';
@@ -19,8 +17,7 @@ import '../../styles/pages/Enrollment.css';
 
 const EnrollmentManagement = () => {
   const [enrollments, setEnrollments] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [students, setStudents] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [filterCourse, setFilterCourse] = useState('all');
@@ -32,64 +29,71 @@ const EnrollmentManagement = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [enrollmentsRes, subjectsRes] = await Promise.all([
+      const [enrollmentsRes, coursesRes] = await Promise.all([
         getAllEnrollments(),
-        getAllSubjects()
+        getAllCourses()
       ]);
       
+      console.log('📥 Enrollments:', enrollmentsRes.data);
+      console.log('📥 Courses:', coursesRes.data);
+      
       setEnrollments(enrollmentsRes.data || []);
-      setSubjects(subjectsRes.data || []);
-      
-      // Extract unique students from enrollments
-      const uniqueStudents = [];
-      const studentIds = new Set();
-      
-      enrollmentsRes.data.forEach(enrollment => {
-        if (enrollment.student && !studentIds.has(enrollment.student._id)) {
-          studentIds.add(enrollment.student._id);
-          uniqueStudents.push({
-            _id: enrollment.student._id,
-            username: enrollment.student.username,
-            email: enrollment.student.email
-          });
-        }
-      });
-      
-      setStudents(uniqueStudents);
+      setCourses(coursesRes.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       toast.error('Failed to load enrollment data');
     } finally {
       setLoading(false);
     }
   };
 
-  // frontend/src/components/Enrollment/EnrollmentManagement.jsx - UPDATE handleEnrollStudent method
-const handleEnrollStudent = async (enrollmentData) => {
-  try {
-    if (enrollmentData.studentEmails && enrollmentData.studentEmails.length > 1) {
-      // Bulk enrollment
-      await bulkEnrollStudents({
-        studentEmails: enrollmentData.studentEmails,
-        courseId: enrollmentData.courseId
-      });
-      toast.success(`${enrollmentData.studentEmails.length} students enrolled successfully!`);
-    } else {
-      // Single enrollment
-      await enrollStudent({
-        studentEmail: enrollmentData.studentEmails[0],
-        courseId: enrollmentData.courseId
-      });
-      toast.success('Student enrolled successfully!');
+  const handleEnrollStudent = async (enrollmentData) => {
+    try {
+      console.log('📤 Enrollment data being sent:', enrollmentData);
+      
+      if (enrollmentData.studentEmails && enrollmentData.studentEmails.length > 1) {
+        // Bulk enrollment
+        const payload = {
+          studentEmails: enrollmentData.studentEmails,
+          courseId: enrollmentData.courseId
+        };
+        console.log('📤 Bulk enrollment payload:', payload);
+        
+        const response = await bulkEnrollStudents(payload);
+        console.log('✅ Bulk enrollment response:', response);
+        toast.success(`${enrollmentData.studentEmails.length} students enrolled successfully!`);
+      } else if (enrollmentData.studentEmails && enrollmentData.studentEmails.length === 1) {
+        // Single enrollment
+        const payload = {
+          studentEmail: enrollmentData.studentEmails[0],
+          courseId: enrollmentData.courseId
+        };
+        console.log('📤 Single enrollment payload:', payload);
+        
+        const response = await enrollStudent(payload);
+        console.log('✅ Single enrollment response:', response);
+        toast.success('Student enrolled successfully!');
+      } else {
+        toast.error('No students selected');
+        return;
+      }
+      
+      setShowEnrollForm(false);
+      await fetchData();
+    } catch (error) {
+      console.error('❌ Enrollment error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      const message = error.response?.data?.message || error.message || 'Failed to enroll student';
+      toast.error(message);
+      
+      // Show detailed error in console for debugging
+      if (error.response?.data) {
+        console.error('Full error details:', JSON.stringify(error.response.data, null, 2));
+      }
     }
-    
-    setShowEnrollForm(false);
-    await fetchData();
-  } catch (error) {
-    const message = error.response?.data?.message || 'Failed to enroll student';
-    toast.error(message);
-  }
-};
+  };
+
   const handleDeleteEnrollment = async (enrollmentId) => {
     if (!window.confirm('Are you sure you want to remove this enrollment?')) {
       return;
@@ -139,8 +143,6 @@ const handleEnrollStudent = async (enrollmentData) => {
 
       {showEnrollForm && (
         <EnrollStudentForm
-          students={students}
-          subjects={subjects}
           onSubmit={handleEnrollStudent}
           onCancel={() => setShowEnrollForm(false)}
         />
@@ -154,11 +156,11 @@ const handleEnrollStudent = async (enrollmentData) => {
           className="form-control"
         >
           <option value="all">All Courses ({enrollments.length})</option>
-          {subjects.map(subject => {
-            const count = enrollments.filter(e => e.course === subject.subjectId).length;
+          {courses.map(course => {
+            const count = enrollments.filter(e => e.course === course.courseId).length;
             return (
-              <option key={subject.subjectId} value={subject.subjectId}>
-                {subject.name} ({count})
+              <option key={course.courseId} value={course.courseId}>
+                {course.name} ({count})
               </option>
             );
           })}
@@ -174,7 +176,7 @@ const handleEnrollStudent = async (enrollmentData) => {
       ) : (
         <EnrollmentList
           enrollments={filteredEnrollments}
-          subjects={subjects}
+          courses={courses}
           onDelete={handleDeleteEnrollment}
           onStatusUpdate={handleStatusUpdate}
         />

@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getAllCourses, deleteCourse, createCourse, updateCourse } from '../../services/courseServices';
 import { getAllSubjects } from '../../services/subjectService';
+import { getAllTrainers } from '../../services/trainerService';
 import { useAuth } from '../../context/AuthContext';
 import Loading from '../Common/Loading';
 import SearchBox from '../Common/SearchBox';
 import CourseCard from './CourseCard';
 import EditCourseModal from './EditCourseModal';
 import { FaPlus } from 'react-icons/fa';
+
 
 const CourseList = () => {
   const { user } = useAuth();
@@ -29,38 +31,54 @@ const CourseList = () => {
     try {
       setLoading(true);
       
-      // Fetch both courses and subjects
-      const [coursesResponse, subjectsResponse] = await Promise.all([
+      // Fetch courses, subjects, and trainers
+      const [coursesResponse, subjectsResponse, trainersResponse] = await Promise.all([
         getAllCourses(),
-        getAllSubjects()
+        getAllSubjects(),
+        getAllTrainers()
       ]);
 
       console.log('Courses:', coursesResponse.data);
       console.log('Subjects:', subjectsResponse.data);
+      console.log('Trainers:', trainersResponse.data);
 
+      // Create maps for quick lookup
       const subjectsMap = {};
       (subjectsResponse.data || []).forEach(subject => {
         subjectsMap[subject.subjectId] = subject;
       });
 
-      // Populate courses with full subject data
+      const trainersMap = {};
+      (trainersResponse.data || []).forEach(trainer => {
+        trainersMap[trainer.empId] = trainer;
+      });
+
+      // Populate courses with full subject data including trainers
       const populatedCourses = (coursesResponse.data || []).map(course => {
         const populatedSubjects = (course.subjects || []).map(subjectRef => {
           const fullSubject = subjectsMap[subjectRef.subjectId];
+          
+          // Get trainer details for this subject
+          const subjectTrainers = (fullSubject?.trainers || []).map(empId => {
+            return trainersMap[empId] || { empId, name: empId };
+          });
+
           return {
             subjectId: subjectRef.subjectId,
-            sequenceOrder: subjectRef.order,
+            order: subjectRef.order,
             name: fullSubject?.name || subjectRef.subjectId,
             description: fullSubject?.description || '',
             level: fullSubject?.level || 'Beginner',
-            duration: fullSubject?.duration || 0,
-            modules: fullSubject?.modules || []
+            totalDuration: fullSubject?.totalDuration || fullSubject?.duration || 0,
+            modules: fullSubject?.modules || [],
+            trainers: subjectTrainers
           };
-        }).sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+        }).sort((a, b) => (a.order || 0) - (b.order || 0));
 
         return {
           ...course,
-          subjects: populatedSubjects
+          subjects: course.subjects || [],
+          populatedSubjects
         };
       });
 
@@ -191,6 +209,7 @@ const CourseList = () => {
       {showModal && (
         <EditCourseModal
           course={editingCourse}
+          subjects={subjects}
           onClose={() => {
             setShowModal(false);
             setEditingCourse(null);
