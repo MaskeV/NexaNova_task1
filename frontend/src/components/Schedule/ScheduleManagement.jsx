@@ -1,7 +1,11 @@
-// frontend/src/components/Schedule/ScheduleManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { getAllSchedules, createSchedule, deleteSchedule, getScheduleByWeek } from '../../services/scheduleService';
+import {
+  getAllSchedules,
+  createSchedule,
+  deleteSchedule,
+  getScheduleByWeek
+} from '../../services/scheduleService';
 import { getAllTrainers } from '../../services/trainerService';
 import { getAllSubjects } from '../../services/subjectService';
 import Loading from '../Common/Loading';
@@ -25,22 +29,32 @@ const ScheduleManagement = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
+
+      // Fetch all three independently so one failure doesn't block others
       const [schedulesRes, trainersRes, subjectsRes] = await Promise.all([
         getAllSchedules(),
         getAllTrainers(),
         getAllSubjects()
       ]);
-      
-      setSchedules(schedulesRes.data || []);
-      setTrainers(trainersRes.data || []);
-      setSubjects(subjectsRes.data || []);
-      
-      // Auto-select most recent schedule
-      if (schedulesRes.data && schedulesRes.data.length > 0) {
-        await loadScheduleDetails(schedulesRes.data[0].weekId);
+
+      const schedulesData = schedulesRes.data || [];
+      const trainersData = trainersRes.data || [];
+      // getAllSubjects returns { success, count, data: [...] }
+      const subjectsData = subjectsRes.data || [];
+
+      console.log('✅ Schedules:', schedulesData.length);
+      console.log('✅ Trainers:', trainersData.length);
+      console.log('✅ Subjects:', subjectsData.length, subjectsData.map(s => s.subjectId + ':' + s.name));
+
+      setSchedules(schedulesData);
+      setTrainers(trainersData);
+      setSubjects(subjectsData);
+
+      if (schedulesData.length > 0) {
+        await loadScheduleDetails(schedulesData[0].weekId);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ fetchInitialData error:', error);
       toast.error('Failed to load schedule data');
     } finally {
       setLoading(false);
@@ -64,29 +78,20 @@ const ScheduleManagement = () => {
       setShowCreateForm(false);
       await fetchInitialData();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to create schedule';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to create schedule');
     }
   };
 
   const handleDeleteSchedule = async (weekId) => {
-    if (!window.confirm(`Are you sure you want to delete schedule ${weekId}? This action cannot be undone.`)) {
-      return;
-    }
-
+    if (!window.confirm(`Delete schedule ${weekId}?`)) return;
     try {
       await deleteSchedule(weekId);
       toast.success('Schedule deleted successfully!');
       setSelectedSchedule(null);
       await fetchInitialData();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to delete schedule';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to delete schedule');
     }
-  };
-
-  const handleScheduleSelect = async (weekId) => {
-    await loadScheduleDetails(weekId);
   };
 
   const handleSlotUpdated = async () => {
@@ -102,9 +107,12 @@ const ScheduleManagement = () => {
       <div className="page-header">
         <div>
           <h1>📅 Schedule Management</h1>
-          <p>Create and manage weekly training schedules</p>
+          <p>Assign subjects and trainers to weekly time slots</p>
+          <small style={{ color: '#888' }}>
+            {subjects.length} subjects | {trainers.length} trainers available
+          </small>
         </div>
-        <button 
+        <button
           className="btn btn-primary"
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
@@ -113,10 +121,23 @@ const ScheduleManagement = () => {
       </div>
 
       {showCreateForm && (
-        <CreateSchedule 
+        <CreateSchedule
           onSubmit={handleCreateSchedule}
           onCancel={() => setShowCreateForm(false)}
         />
+      )}
+
+      {subjects.length === 0 && !loading && (
+        <div style={{
+          background: '#fff3cd',
+          border: '2px solid #ffc107',
+          borderRadius: '8px',
+          padding: '1rem 1.5rem',
+          marginBottom: '1.5rem',
+          color: '#856404'
+        }}>
+          ⚠️ No subjects found. Please add subjects first before assigning schedule slots.
+        </div>
       )}
 
       {schedules.length === 0 ? (
@@ -134,7 +155,7 @@ const ScheduleManagement = () => {
                 <div
                   key={schedule.weekId}
                   className={`schedule-item ${selectedSchedule?.weekId === schedule.weekId ? 'active' : ''}`}
-                  onClick={() => handleScheduleSelect(schedule.weekId)}
+                  onClick={() => loadScheduleDetails(schedule.weekId)}
                 >
                   <div className="schedule-item-header">
                     <strong>{schedule.weekId}</strong>
@@ -144,13 +165,13 @@ const ScheduleManagement = () => {
                         e.stopPropagation();
                         handleDeleteSchedule(schedule.weekId);
                       }}
-                      title="Delete schedule"
                     >
                       <FaTrash size={12} />
                     </button>
                   </div>
                   <small>
-                    {new Date(schedule.weekStartDate).toLocaleDateString()} - {new Date(schedule.weekEndDate).toLocaleDateString()}
+                    {new Date(schedule.weekStartDate).toLocaleDateString()} -{' '}
+                    {new Date(schedule.weekEndDate).toLocaleDateString()}
                   </small>
                 </div>
               ))}

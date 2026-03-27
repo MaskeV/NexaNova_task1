@@ -1,4 +1,3 @@
-// frontend/src/components/Schedule/ScheduleGrid.jsx
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { allocateSlot, deallocateSlot } from '../../services/scheduleService';
@@ -7,8 +6,8 @@ import { FaEdit, FaTrash, FaCheck, FaTimes } from 'react-icons/fa';
 
 const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
   const [editingSlot, setEditingSlot] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTrainer, setSelectedTrainer] = useState('');
-  const [selectedModule, setSelectedModule] = useState('');
   const [saving, setSaving] = useState(false);
 
   const getSlot = (day, timeSlot) => {
@@ -19,67 +18,62 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
 
   const handleEditSlot = (slot) => {
     setEditingSlot(slot._id);
-    setSelectedTrainer(slot.trainer || '');
-    setSelectedModule(slot.module || '');
+    setSelectedSubject(slot.subjectId || '');
+    setSelectedTrainer(slot.trainerId || '');
   };
 
   const handleCancelEdit = () => {
     setEditingSlot(null);
+    setSelectedSubject('');
     setSelectedTrainer('');
-    setSelectedModule('');
+  };
+
+  // Get trainers who are assigned to the selected subject
+  const getTrainersForSubject = (subjectId) => {
+    if (!subjectId) return [];
+    return trainers.filter(
+      trainer => trainer.subjects && trainer.subjects.includes(subjectId)
+    );
   };
 
   const handleSaveSlot = async (slotId) => {
-    if (!selectedTrainer || !selectedModule) {
-      toast.error('Please select both trainer and module');
+    if (!selectedSubject || !selectedTrainer) {
+      toast.error('Please select both a subject and a trainer');
       return;
     }
 
     try {
       setSaving(true);
-      await allocateSlot(slotId, schedule.weekId, selectedTrainer, selectedModule);
+      await allocateSlot(slotId, schedule.weekId, selectedTrainer, selectedSubject);
       toast.success('Slot allocated successfully!');
       setEditingSlot(null);
+      setSelectedSubject('');
       setSelectedTrainer('');
-      setSelectedModule('');
       onSlotUpdated();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to allocate slot';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to allocate slot');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeallocateSlot = async (slotId) => {
-    if (!window.confirm('Are you sure you want to deallocate this slot?')) {
-      return;
-    }
-
+    if (!window.confirm('Remove this allocation?')) return;
     try {
       setSaving(true);
       await deallocateSlot(slotId, schedule.weekId);
-      toast.success('Slot deallocated successfully!');
+      toast.success('Slot cleared successfully!');
       onSlotUpdated();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to deallocate slot';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to clear slot');
     } finally {
       setSaving(false);
     }
   };
 
-  // Filter trainers by selected module
-  const getAvailableTrainers = () => {
-    if (!selectedModule) return trainers;
-    return trainers.filter(trainer => 
-      trainer.subjects && trainer.subjects.includes(selectedModule)
-    );
-  };
-
-  const getModuleName = (moduleId) => {
-    const subject = subjects.find(s => s.subjectId === moduleId);
-    return subject ? subject.name : moduleId;
+  const getSubjectName = (subjectId) => {
+    const subject = subjects.find(s => s.subjectId === subjectId);
+    return subject ? subject.name : subjectId;
   };
 
   const getTrainerName = (empId) => {
@@ -87,19 +81,18 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
     return trainer ? trainer.name : empId;
   };
 
+  const availableTrainers = getTrainersForSubject(selectedSubject);
+
   return (
     <div className="schedule-grid-container">
       <div className="schedule-header">
         <h2>📅 {schedule.weekId}</h2>
         <p>
-          {new Date(schedule.weekStartDate).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })} - {new Date(schedule.weekEndDate).toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          {new Date(schedule.weekStartDate).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          })} -{' '}
+          {new Date(schedule.weekEndDate).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
           })}
         </p>
       </div>
@@ -123,13 +116,17 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
                 <div key={`${day}-${timeSlot}`} className="schedule-cell">
                   {isEditing ? (
                     <div className="slot-editor">
+                      {/* Subject Dropdown */}
                       <select
-                        value={selectedModule}
-                        onChange={(e) => setSelectedModule(e.target.value)}
+                        value={selectedSubject}
+                        onChange={(e) => {
+                          setSelectedSubject(e.target.value);
+                          setSelectedTrainer(''); // reset trainer on subject change
+                        }}
                         className="form-control-small"
                         disabled={saving}
                       >
-                        <option value="">Select Module</option>
+                        <option value="">-- Select Subject --</option>
                         {subjects.map(subject => (
                           <option key={subject.subjectId} value={subject.subjectId}>
                             {subject.name}
@@ -137,25 +134,39 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
                         ))}
                       </select>
 
+                      {/* Trainer Dropdown - only enabled after subject selected */}
                       <select
                         value={selectedTrainer}
                         onChange={(e) => setSelectedTrainer(e.target.value)}
                         className="form-control-small"
-                        disabled={saving || !selectedModule}
+                        disabled={saving || !selectedSubject}
                       >
-                        <option value="">Select Trainer</option>
-                        {getAvailableTrainers().map(trainer => (
+                        <option value="">
+                          {!selectedSubject
+                            ? '-- Select subject first --'
+                            : availableTrainers.length === 0
+                              ? '-- No trainers for this subject --'
+                              : '-- Select Trainer --'}
+                        </option>
+                        {availableTrainers.map(trainer => (
                           <option key={trainer.empId} value={trainer.empId}>
                             {trainer.name} ({trainer.empId})
                           </option>
                         ))}
                       </select>
 
+                      {/* Warning if no trainers for selected subject */}
+                      {selectedSubject && availableTrainers.length === 0 && (
+                        <small style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                          ⚠️ No trainers assigned to this subject yet
+                        </small>
+                      )}
+
                       <div className="slot-editor-actions">
                         <button
                           className="btn-icon btn-success"
                           onClick={() => handleSaveSlot(slot._id)}
-                          disabled={saving || !selectedTrainer || !selectedModule}
+                          disabled={saving || !selectedSubject || !selectedTrainer}
                           title="Save"
                         >
                           <FaCheck />
@@ -172,8 +183,12 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
                     </div>
                   ) : slot?.isAllocated ? (
                     <div className="slot-content allocated">
-                      <div className="slot-module">{getModuleName(slot.module)}</div>
-                      <div className="slot-trainer">{getTrainerName(slot.trainer)}</div>
+                      <div className="slot-module">
+                        {slot.subjectDetails?.name || getSubjectName(slot.subjectId)}
+                      </div>
+                      <div className="slot-trainer">
+                        {slot.trainerDetails?.name || getTrainerName(slot.trainerId)}
+                      </div>
                       <div className="slot-actions">
                         <button
                           className="btn-icon btn-primary"
@@ -214,11 +229,11 @@ const ScheduleGrid = ({ schedule, trainers, subjects, onSlotUpdated }) => {
       <div className="schedule-legend">
         <div className="legend-item">
           <span className="legend-box allocated"></span>
-          <span>Allocated Slot</span>
+          <span>Allocated</span>
         </div>
         <div className="legend-item">
           <span className="legend-box empty"></span>
-          <span>Available Slot</span>
+          <span>Available</span>
         </div>
       </div>
     </div>

@@ -135,42 +135,17 @@ const addSubject = async (req, res) => {
 // backend/src/controllers/subjectController.js
 
 // Replace getAllSubjects function
-// Replace getAllSubjects function
 const getAllSubjects = async (req, res) => {
   try {
     const subjects = await Subject.find()
+      .populate('trainers', 'name empId email experience')
+      .populate('modules') // Populate module references
       .sort({ createdAt: -1 });
-
-    // Manually populate trainers using empId
-    const populatedSubjects = await Promise.all(
-      subjects.map(async (subject) => {
-        const subjectObj = subject.toObject();
-        
-        if (subjectObj.trainers && subjectObj.trainers.length > 0) {
-          const trainers = await Trainer.find({
-            empId: { $in: subjectObj.trainers }
-          }).select('name empId email experience');
-          
-          subjectObj.trainers = trainers;
-        }
-        
-        if (subjectObj.modules && subjectObj.modules.length > 0) {
-          const moduleIds = subjectObj.modules.map(m => m.moduleId || m);
-          const modules = await Module.find({
-            moduleId: { $in: moduleIds }
-          });
-          
-          subjectObj.modules = modules;
-        }
-        
-        return subjectObj;
-      })
-    );
 
     res.status(200).json({
       success: true,
-      count: populatedSubjects.length,
-      data: populatedSubjects
+      count: subjects.length,
+      data: subjects
     });
   } catch (error) {
     console.error('Error in getAllSubjects:', error);
@@ -186,7 +161,9 @@ const getSubjectById = async (req, res) => {
   try {
     const { subjectId } = req.params;
 
-    const subject = await Subject.findOne({ subjectId });
+    const subject = await Subject.findOne({ subjectId })
+      .populate('trainers', 'name empId email experience')
+      .populate('modules'); // Populate module references
 
     if (!subject) {
       return res.status(404).json({
@@ -195,30 +172,9 @@ const getSubjectById = async (req, res) => {
       });
     }
 
-    const subjectObj = subject.toObject();
-    
-    // Manually populate trainers using empId
-    if (subjectObj.trainers && subjectObj.trainers.length > 0) {
-      const trainers = await Trainer.find({
-        empId: { $in: subjectObj.trainers }
-      }).select('name empId email experience');
-      
-      subjectObj.trainers = trainers;
-    }
-    
-    // Manually populate modules
-    if (subjectObj.modules && subjectObj.modules.length > 0) {
-      const moduleIds = subjectObj.modules.map(m => m.moduleId || m);
-      const modules = await Module.find({
-        moduleId: { $in: moduleIds }
-      });
-      
-      subjectObj.modules = modules;
-    }
-
     res.status(200).json({
       success: true,
-      data: subjectObj
+      data: subject
     });
   } catch (error) {
     console.error('Error in getSubjectById:', error);
@@ -397,9 +353,6 @@ const removeModuleFromSubject = async (req, res) => {
 
 // @desc    Update a subject
 // @route   PUT /subject/:id
-// backend/src/controllers/subjectController.js
-// Replace the updateSubject function
-
 const updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
@@ -461,7 +414,6 @@ const updateSubject = async (req, res) => {
           { empId: { $in: trainersToRemove } },
           { $pull: { subjects: subjectId } }
         );
-        console.log('🔄 Removed subject from trainers:', trainersToRemove);
       }
 
       // Add subject to new trainers
@@ -471,7 +423,6 @@ const updateSubject = async (req, res) => {
           { empId: { $in: trainersToAdd } },
           { $addToSet: { subjects: subjectId } }
         );
-        console.log('🔄 Added subject to trainers:', trainersToAdd);
       }
     }
 
@@ -503,6 +454,7 @@ const updateSubject = async (req, res) => {
     });
   }
 };
+
 // @desc    Delete a subject
 // @route   DELETE /subject/:id
 const deleteSubject = async (req, res) => {

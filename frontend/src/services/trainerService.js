@@ -42,6 +42,16 @@ export const addTrainer = async (trainerData) => {
   }
 };
 
+// ✅ FIX: updateTrainer was missing — EditTrainer.jsx calls this
+export const updateTrainer = async (empId, trainerData) => {
+  try {
+    const response = await api.put(API_ENDPOINTS.TRAINER_UPDATE(empId), trainerData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Delete trainer
 export const deleteTrainer = async (empId) => {
   try {

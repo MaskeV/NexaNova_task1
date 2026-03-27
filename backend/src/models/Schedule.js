@@ -1,4 +1,3 @@
-// backend/src/models/Schedule.js
 const mongoose = require('mongoose');
 
 const timeSlotSchema = new mongoose.Schema({
@@ -18,13 +17,13 @@ const timeSlotSchema = new mongoose.Schema({
       message: 'Time slot must be one of the four 3-hour slots'
     }
   },
-  module: {
-    type: String, // subjectId reference
+  subjectId: {
+    type: String,
     ref: 'Subject',
     default: null
   },
-  trainer: {
-    type: String, // empId reference
+  trainerId: {
+    type: String,
     ref: 'Trainer',
     default: null
   },
@@ -61,35 +60,7 @@ const scheduleSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
 scheduleSchema.index({ weekId: 1 });
 scheduleSchema.index({ weekStartDate: 1 });
-scheduleSchema.index({ 'timeSlots.trainer': 1 });
-scheduleSchema.index({ 'timeSlots.module': 1 });
-
-// Method to check if a slot is available
-scheduleSchema.methods.isSlotAvailable = function(day, timeSlot) {
-  const slot = this.timeSlots.find(
-    s => s.day === day && s.timeSlot === timeSlot
-  );
-  return slot && !slot.isAllocated;
-};
-
-// Method to allocate a slot
-scheduleSchema.methods.allocateSlot = function(slotId, trainerId, moduleId) {
-  const slot = this.timeSlots.id(slotId);
-  if (!slot) {
-    throw new Error('Time slot not found');
-  }
-  if (slot.isAllocated) {
-    throw new Error('Time slot is already allocated');
-  }
-  
-  slot.trainer = trainerId;
-  slot.module = moduleId;
-  slot.isAllocated = true;
-  
-  return slot;
-};
 
 module.exports = mongoose.model('Schedule', scheduleSchema);

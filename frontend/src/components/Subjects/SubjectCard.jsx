@@ -9,7 +9,6 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
   const [loading, setLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
-  // Truncate description to specified length
   const truncateText = (text, maxLength) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
@@ -36,7 +35,11 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
     try {
       setLoading(true);
       const response = await getSubjectById(subject.subjectId);
-      setTrainers(response.data.trainers);
+
+      // ✅ FIX: getSubjectWithTrainers returns { data: { subject, modules, trainers, stats } }
+      // not { data: { trainers } } directly
+      const fetchedTrainers = response.data?.trainers || response.data?.data?.trainers || [];
+      setTrainers(fetchedTrainers);
       setShowTrainers(true);
     } catch (error) {
       console.error('Failed to fetch trainers:', error);
@@ -44,6 +47,10 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
       setLoading(false);
     }
   };
+
+  // Normalize trainer count — subject.trainers may be array of strings (empIds) or objects
+  const trainerCount = subject.trainers?.length || 0;
+  const moduleCount = subject.modules?.length || 0;
 
   return (
     <div className="subject-card card">
@@ -61,24 +68,20 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
         {subject.description && (
           <div className="subject-description-container">
             <p className="subject-description">
-              {isDescriptionExpanded 
-                ? subject.description 
+              {isDescriptionExpanded
+                ? subject.description
                 : truncateText(subject.description, 100)
               }
             </p>
             {shouldShowReadMore && (
-              <button 
+              <button
                 className="read-more-btn"
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
               >
                 {isDescriptionExpanded ? (
-                  <>
-                    <FaChevronUp size={12} /> Show less
-                  </>
+                  <><FaChevronUp size={12} /> Show less</>
                 ) : (
-                  <>
-                    <FaChevronDown size={12} /> Read more
-                  </>
+                  <><FaChevronDown size={12} /> Read more</>
                 )}
               </button>
             )}
@@ -88,12 +91,13 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
         <div className="subject-details">
           <div className="subject-detail">
             <FaClock className="icon" />
-            <span>{subject.duration || 0} hours</span>
+            {/* ✅ FIX: show totalDuration if available, fallback to duration */}
+            <span>{subject.totalDuration || subject.duration || 0} hours</span>
           </div>
 
           <div className="subject-detail">
             <FaChartLine className="icon" />
-            <span 
+            <span
               className="subject-level"
               style={{ color: getLevelColor(subject.level) }}
             >
@@ -103,13 +107,19 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
 
           <div className="subject-detail">
             <FaUsers className="icon" />
-            <span>{subject.trainers?.length || 0} trainer(s)</span>
+            <span>{trainerCount} trainer(s)</span>
+          </div>
+
+          {/* ✅ NEW: show module count */}
+          <div className="subject-detail">
+            <FaBook className="icon" />
+            <span>{moduleCount} module(s)</span>
           </div>
         </div>
 
-        {subject.trainers && subject.trainers.length > 0 && (
+        {trainerCount > 0 && (
           <div className="trainers-section">
-            <button 
+            <button
               className="btn-show-trainers"
               onClick={fetchTrainers}
               disabled={loading}
@@ -136,7 +146,7 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
       {(canEdit || canDelete) && (
         <div className="subject-card-footer">
           {canEdit && (
-            <button 
+            <button
               className="btn btn-primary btn-sm"
               onClick={() => onEdit(subject)}
             >
@@ -144,7 +154,7 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
             </button>
           )}
           {canDelete && (
-            <button 
+            <button
               className="btn btn-danger btn-sm"
               onClick={() => onDelete(subject.subjectId)}
             >
@@ -158,7 +168,6 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
         .subject-description-container {
           margin-bottom: 1rem;
         }
-
         .subject-description {
           color: #666;
           font-size: 0.95rem;
@@ -166,7 +175,6 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
           margin: 0 0 0.5rem 0;
           word-break: break-word;
         }
-
         .read-more-btn {
           background: none;
           border: none;
@@ -180,16 +188,8 @@ const SubjectCard = ({ subject, onDelete, onEdit, canEdit = false, canDelete = f
           padding: 0.25rem 0;
           transition: all 0.2s ease;
         }
-
         .read-more-btn:hover {
           color: #764ba2;
-          gap: 0.5rem;
-        }
-
-        .read-more-btn:focus {
-          outline: 2px solid #667eea;
-          outline-offset: 2px;
-          border-radius: 4px;
         }
       `}</style>
     </div>
