@@ -1,3 +1,4 @@
+// frontend/src/components/Schedule/ScheduleManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import {
@@ -6,8 +7,6 @@ import {
   deleteSchedule,
   getScheduleByWeek
 } from '../../services/scheduleService';
-import { getAllTrainers } from '../../services/trainerService';
-import { getAllSubjects } from '../../services/subjectService';
 import Loading from '../Common/Loading';
 import ScheduleGrid from './ScheduleGrid';
 import CreateSchedule from './CreateSchedule';
@@ -19,43 +18,25 @@ const ScheduleManagement = () => {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [trainers, setTrainers] = useState([]);
-  const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
-    fetchInitialData();
+    fetchSchedules();
   }, []);
 
-  const fetchInitialData = async () => {
+  const fetchSchedules = async () => {
     try {
       setLoading(true);
+      const res = await getAllSchedules();
+      const list = res.data || [];
+      setSchedules(list);
 
-      // Fetch all three independently so one failure doesn't block others
-      const [schedulesRes, trainersRes, subjectsRes] = await Promise.all([
-        getAllSchedules(),
-        getAllTrainers(),
-        getAllSubjects()
-      ]);
-
-      const schedulesData = schedulesRes.data || [];
-      const trainersData = trainersRes.data || [];
-      // getAllSubjects returns { success, count, data: [...] }
-      const subjectsData = subjectsRes.data || [];
-
-      console.log('✅ Schedules:', schedulesData.length);
-      console.log('✅ Trainers:', trainersData.length);
-      console.log('✅ Subjects:', subjectsData.length, subjectsData.map(s => s.subjectId + ':' + s.name));
-
-      setSchedules(schedulesData);
-      setTrainers(trainersData);
-      setSubjects(subjectsData);
-
-      if (schedulesData.length > 0) {
-        await loadScheduleDetails(schedulesData[0].weekId);
+      // Auto-select the most recent schedule
+      if (list.length > 0) {
+        await loadScheduleDetails(list[0].weekId);
       }
     } catch (error) {
-      console.error('❌ fetchInitialData error:', error);
-      toast.error('Failed to load schedule data');
+      console.error('Error fetching schedules:', error);
+      toast.error('Failed to load schedules');
     } finally {
       setLoading(false);
     }
@@ -63,8 +44,8 @@ const ScheduleManagement = () => {
 
   const loadScheduleDetails = async (weekId) => {
     try {
-      const response = await getScheduleByWeek(weekId);
-      setSelectedSchedule(response.data);
+      const res = await getScheduleByWeek(weekId);
+      setSelectedSchedule(res.data);
     } catch (error) {
       console.error('Error loading schedule:', error);
       toast.error('Failed to load schedule details');
@@ -76,19 +57,19 @@ const ScheduleManagement = () => {
       await createSchedule(weekStartDate);
       toast.success('Schedule created successfully!');
       setShowCreateForm(false);
-      await fetchInitialData();
+      await fetchSchedules();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create schedule');
     }
   };
 
   const handleDeleteSchedule = async (weekId) => {
-    if (!window.confirm(`Delete schedule ${weekId}?`)) return;
+    if (!window.confirm(`Delete schedule ${weekId}? This cannot be undone.`)) return;
     try {
       await deleteSchedule(weekId);
-      toast.success('Schedule deleted successfully!');
-      setSelectedSchedule(null);
-      await fetchInitialData();
+      toast.success('Schedule deleted');
+      if (selectedSchedule?.weekId === weekId) setSelectedSchedule(null);
+      await fetchSchedules();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to delete schedule');
     }
@@ -107,10 +88,7 @@ const ScheduleManagement = () => {
       <div className="page-header">
         <div>
           <h1>📅 Schedule Management</h1>
-          <p>Assign subjects and trainers to weekly time slots</p>
-          <small style={{ color: '#888' }}>
-            {subjects.length} subjects | {trainers.length} trainers available
-          </small>
+          <p>Create and manage weekly training schedules</p>
         </div>
         <button
           className="btn btn-primary"
@@ -127,19 +105,6 @@ const ScheduleManagement = () => {
         />
       )}
 
-      {subjects.length === 0 && !loading && (
-        <div style={{
-          background: '#fff3cd',
-          border: '2px solid #ffc107',
-          borderRadius: '8px',
-          padding: '1rem 1.5rem',
-          marginBottom: '1.5rem',
-          color: '#856404'
-        }}>
-          ⚠️ No subjects found. Please add subjects first before assigning schedule slots.
-        </div>
-      )}
-
       {schedules.length === 0 ? (
         <div className="empty-state card">
           <FaCalendar size={60} color="#ccc" />
@@ -148,10 +113,11 @@ const ScheduleManagement = () => {
         </div>
       ) : (
         <div className="schedule-content">
+          {/* Sidebar: schedule list */}
           <div className="schedules-sidebar">
             <h3>📋 Available Schedules</h3>
             <div className="schedule-list">
-              {schedules.map((schedule) => (
+              {schedules.map(schedule => (
                 <div
                   key={schedule.weekId}
                   className={`schedule-item ${selectedSchedule?.weekId === schedule.weekId ? 'active' : ''}`}
@@ -165,12 +131,13 @@ const ScheduleManagement = () => {
                         e.stopPropagation();
                         handleDeleteSchedule(schedule.weekId);
                       }}
+                      title="Delete schedule"
                     >
                       <FaTrash size={12} />
                     </button>
                   </div>
                   <small>
-                    {new Date(schedule.weekStartDate).toLocaleDateString()} -{' '}
+                    {new Date(schedule.weekStartDate).toLocaleDateString()} –{' '}
                     {new Date(schedule.weekEndDate).toLocaleDateString()}
                   </small>
                 </div>
@@ -178,14 +145,25 @@ const ScheduleManagement = () => {
             </div>
           </div>
 
+          {/* Main: grid */}
           <div className="schedule-main">
             {selectedSchedule ? (
-              <ScheduleGrid
-                schedule={selectedSchedule}
-                trainers={trainers}
-                subjects={subjects}
-                onSlotUpdated={handleSlotUpdated}
-              />
+              <>
+                <div className="hierarchy-notice">
+                  <span>📌 Allocate slots by selecting:</span>
+                  <span className="step">Course</span>
+                  <span className="arrow">→</span>
+                  <span className="step">Subject</span>
+                  <span className="arrow">→</span>
+                  <span className="step">Module</span>
+                  <span className="arrow">→</span>
+                  <span className="step">Trainer</span>
+                </div>
+                <ScheduleGrid
+                  schedule={selectedSchedule}
+                  onSlotUpdated={handleSlotUpdated}
+                />
+              </>
             ) : (
               <div className="empty-state">
                 <p>Select a schedule from the list to view and edit</p>
@@ -194,6 +172,42 @@ const ScheduleManagement = () => {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .hierarchy-notice {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+          padding: 0.75rem 1rem;
+          background: linear-gradient(135deg, #f0f4ff 0%, #e8f5e9 100%);
+          border: 1px solid #c5cae9;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          font-size: 0.88rem;
+          color: #555;
+        }
+
+        .hierarchy-notice > span:first-child {
+          font-weight: 600;
+          color: #333;
+          margin-right: 0.25rem;
+        }
+
+        .step {
+          padding: 0.2rem 0.6rem;
+          background: #667eea;
+          color: white;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 0.8rem;
+        }
+
+        .arrow {
+          color: #667eea;
+          font-weight: 700;
+        }
+      `}</style>
     </div>
   );
 };

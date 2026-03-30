@@ -1,9 +1,9 @@
 // frontend/src/components/Enrollment/EnrollmentManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { 
-  getAllEnrollments, 
-  enrollStudent, 
+import {
+  getAllEnrollments,
+  enrollStudent,
   bulkEnrollStudents,
   deleteEnrollment,
   updateEnrollmentStatus
@@ -12,8 +12,11 @@ import { getAllCourses } from '../../services/courseServices';
 import Loading from '../Common/Loading';
 import EnrollStudentForm from './EnrollStudentForm';
 import EnrollmentList from './EnrollmentList';
-import { FaUserPlus, FaUsers } from 'react-icons/fa';
+import { FaUserPlus, FaUsers, FaUpload, FaCheckSquare } from 'react-icons/fa';
 import '../../styles/pages/Enrollment.css';
+
+import BulkUploadStudents from './BulkUploadStudents';
+import BulkEnrollSelected from './BulkEnrollSelected';
 
 const EnrollmentManagement = () => {
   const [enrollments, setEnrollments] = useState([]);
@@ -21,6 +24,8 @@ const EnrollmentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [filterCourse, setFilterCourse] = useState('all');
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [showBulkEnroll, setShowBulkEnroll] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -33,95 +38,70 @@ const EnrollmentManagement = () => {
         getAllEnrollments(),
         getAllCourses()
       ]);
-      
-      console.log('📥 Enrollments:', enrollmentsRes.data);
-      console.log('📥 Courses:', coursesRes.data);
-      
+
       setEnrollments(enrollmentsRes.data || []);
       setCourses(coursesRes.data || []);
     } catch (error) {
-      console.error('❌ Error fetching data:', error);
+      console.error('Error fetching data:', error);
       toast.error('Failed to load enrollment data');
     } finally {
       setLoading(false);
     }
   };
 
+  // EnrollStudentForm now passes { studentEmails, courseId }
   const handleEnrollStudent = async (enrollmentData) => {
     try {
-      console.log('📤 Enrollment data being sent:', enrollmentData);
-      
-      if (enrollmentData.studentEmails && enrollmentData.studentEmails.length > 1) {
+      const { studentEmails, courseId } = enrollmentData;
+
+      if (studentEmails.length > 1) {
         // Bulk enrollment
-        const payload = {
-          studentEmails: enrollmentData.studentEmails,
-          courseId: enrollmentData.courseId
-        };
-        console.log('📤 Bulk enrollment payload:', payload);
-        
-        const response = await bulkEnrollStudents(payload);
-        console.log('✅ Bulk enrollment response:', response);
-        toast.success(`${enrollmentData.studentEmails.length} students enrolled successfully!`);
-      } else if (enrollmentData.studentEmails && enrollmentData.studentEmails.length === 1) {
-        // Single enrollment
-        const payload = {
-          studentEmail: enrollmentData.studentEmails[0],
-          courseId: enrollmentData.courseId
-        };
-        console.log('📤 Single enrollment payload:', payload);
-        
-        const response = await enrollStudent(payload);
-        console.log('✅ Single enrollment response:', response);
-        toast.success('Student enrolled successfully!');
+        const res = await bulkEnrollStudents({ studentEmails, courseId });
+        const { successful, failed } = res.data;
+        if (successful.length > 0) {
+          toast.success(`${successful.length} student(s) enrolled successfully!`);
+        }
+        if (failed.length > 0) {
+          failed.forEach(f => toast.warning(`${f.email}: ${f.reason}`));
+        }
       } else {
-        toast.error('No students selected');
-        return;
+        // Single enrollment
+        await enrollStudent({ studentEmail: studentEmails[0], courseId });
+        toast.success('Student enrolled successfully!');
       }
-      
+
       setShowEnrollForm(false);
       await fetchData();
     } catch (error) {
-      console.error('❌ Enrollment error:', error);
-      console.error('Error response:', error.response?.data);
-      
-      const message = error.response?.data?.message || error.message || 'Failed to enroll student';
+      const message = error.response?.data?.message || 'Failed to enroll student';
       toast.error(message);
-      
-      // Show detailed error in console for debugging
-      if (error.response?.data) {
-        console.error('Full error details:', JSON.stringify(error.response.data, null, 2));
-      }
     }
   };
 
   const handleDeleteEnrollment = async (enrollmentId) => {
-    if (!window.confirm('Are you sure you want to remove this enrollment?')) {
-      return;
-    }
-
+    if (!window.confirm('Remove this enrollment?')) return;
     try {
       await deleteEnrollment(enrollmentId);
       toast.success('Enrollment removed successfully!');
       await fetchData();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to remove enrollment';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to remove enrollment');
     }
   };
 
   const handleStatusUpdate = async (enrollmentId, newStatus) => {
     try {
       await updateEnrollmentStatus(enrollmentId, newStatus);
-      toast.success('Enrollment status updated!');
+      toast.success('Status updated!');
       await fetchData();
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to update status';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
-  const filteredEnrollments = filterCourse === 'all' 
-    ? enrollments 
+  // Filter enrollments by selected course
+  const filteredEnrollments = filterCourse === 'all'
+    ? enrollments
     : enrollments.filter(e => e.course === filterCourse);
 
   if (loading) return <Loading message="Loading enrollments..." />;
@@ -133,21 +113,70 @@ const EnrollmentManagement = () => {
           <h1>👥 Student Enrollment Management</h1>
           <p>Enroll students in courses and manage their enrollments</p>
         </div>
-        <button 
-          className="btn btn-primary"
-          onClick={() => setShowEnrollForm(!showEnrollForm)}
-        >
-          <FaUserPlus /> {showEnrollForm ? 'Cancel' : 'Enroll Student'}
-        </button>
+        <div className="header-actions">
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setShowBulkUpload(!showBulkUpload);
+              setShowBulkEnroll(false);
+              setShowEnrollForm(false);
+            }}
+          >
+            <FaUpload /> {showBulkUpload ? 'Cancel Upload' : 'Bulk Upload Students'}
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setShowBulkEnroll(!showBulkEnroll);
+              setShowBulkUpload(false);
+              setShowEnrollForm(false);
+            }}
+          >
+            <FaCheckSquare /> {showBulkEnroll ? 'Cancel' : 'Bulk Enroll Students'}
+          </button>
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              setShowEnrollForm(!showEnrollForm);
+              setShowBulkUpload(false);
+              setShowBulkEnroll(false);
+            }}
+          >
+            <FaUserPlus /> {showEnrollForm ? 'Cancel' : 'Enroll Student'}
+          </button>
+        </div>
       </div>
+
+      {showBulkUpload && (
+        <BulkUploadStudents
+          onSuccess={() => {
+            setShowBulkUpload(false);
+            fetchData();
+          }}
+          onCancel={() => setShowBulkUpload(false)}
+        />
+      )}
+
+      {showBulkEnroll && (
+        <BulkEnrollSelected
+          courses={courses}
+          onSuccess={() => {
+            setShowBulkEnroll(false);
+            fetchData();
+          }}
+          onCancel={() => setShowBulkEnroll(false)}
+        />
+      )}
 
       {showEnrollForm && (
         <EnrollStudentForm
+          courses={courses}
           onSubmit={handleEnrollStudent}
           onCancel={() => setShowEnrollForm(false)}
         />
       )}
 
+      {/* Filter by Course (using actual courses, not subjects) */}
       <div className="enrollment-filters card">
         <label>Filter by Course:</label>
         <select
@@ -171,9 +200,15 @@ const EnrollmentManagement = () => {
         <div className="empty-state card">
           <FaUsers size={60} color="#ccc" />
           <h3>No enrollments found</h3>
-          <p>{filterCourse === 'all' ? 'Click "Enroll Student" to get started' : 'No students enrolled in this course'}</p>
+          <p>
+            {filterCourse === 'all'
+              ? 'Click "Enroll Student" to get started'
+              : 'No students enrolled in this course'}
+          </p>
         </div>
       ) : (
+        // EnrollmentList still takes subjects for display names — we pass courses
+        // The courseId stored on enrollment now matches course.courseId
         <EnrollmentList
           enrollments={filteredEnrollments}
           courses={courses}
@@ -181,6 +216,25 @@ const EnrollmentManagement = () => {
           onStatusUpdate={handleStatusUpdate}
         />
       )}
+
+      <style jsx>{`
+        .header-actions {
+          display: flex;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+          .page-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .header-actions {
+            flex-direction: column;
+          }
+        }
+      `}</style>
     </div>
   );
 };

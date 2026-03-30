@@ -1,4 +1,4 @@
-// backend/src/controllers/timetableController.js
+// backend/src/controllers/timetableController.js - FIXED: Use subject instead of module
 const Enrollment = require('../models/Enrollment');
 const Schedule = require('../models/Schedule');
 const Subject = require('../models/Subject');
@@ -37,7 +37,7 @@ const getStudentTimetable = async (req, res) => {
       });
     }
     
-    // Get course IDs
+    // Get course/subject IDs
     const courseIds = enrollments.map(e => e.course);
     
     // Find schedule (use provided weekId or get current week)
@@ -60,26 +60,27 @@ const getStudentTimetable = async (req, res) => {
       });
     }
     
-    // Filter time slots for student's enrolled courses
+    // Filter time slots for student's enrolled courses/subjects
     const studentSlots = schedule.timeSlots.filter(slot => 
-      slot.isAllocated && courseIds.includes(slot.module)
+      slot.isAllocated && courseIds.includes(slot.subject) // CHANGED: subject instead of module
     );
     
     // Populate slot details
     const populatedSlots = await Promise.all(
       studentSlots.map(async (slot) => {
-        const module = await Subject.findOne({ subjectId: slot.module });
+        const subject = await Subject.findOne({ subjectId: slot.subject });
         const trainer = await Trainer.findOne({ empId: slot.trainer });
         
         return {
           _id: slot._id,
           day: slot.day,
           timeSlot: slot.timeSlot,
-          module: {
-            subjectId: slot.module,
-            name: module?.name || 'Unknown',
-            description: module?.description,
-            level: module?.level
+          subject: {
+            subjectId: slot.subject,
+            name: subject?.name || 'Unknown',
+            description: subject?.description,
+            level: subject?.level,
+            totalDuration: subject?.totalDuration
           },
           trainer: trainer ? {
             empId: trainer.empId,
@@ -91,7 +92,7 @@ const getStudentTimetable = async (req, res) => {
       })
     );
     
-    // Get course details
+    // Get course/subject details
     const courses = await Promise.all(
       courseIds.map(async (courseId) => {
         const course = await Subject.findOne({ subjectId: courseId });
@@ -174,21 +175,21 @@ const getTimetableStats = async (req, res) => {
     
     stats.utilizationPercentage = ((stats.allocatedSlots / stats.totalSlots) * 100).toFixed(2);
     
-    // Get unique trainers and modules
+    // Get unique trainers and subjects
     const uniqueTrainers = new Set(
       schedule.timeSlots
         .filter(s => s.isAllocated && s.trainer)
         .map(s => s.trainer)
     );
     
-    const uniqueModules = new Set(
+    const uniqueSubjects = new Set(
       schedule.timeSlots
-        .filter(s => s.isAllocated && s.module)
-        .map(s => s.module)
+        .filter(s => s.isAllocated && s.subject) // CHANGED: subject instead of module
+        .map(s => s.subject)
     );
     
     stats.uniqueTrainers = uniqueTrainers.size;
-    stats.uniqueModules = uniqueModules.size;
+    stats.uniqueSubjects = uniqueSubjects.size; // CHANGED: uniqueSubjects instead of uniqueModules
     
     // Get slots by day
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

@@ -23,10 +23,20 @@ export const enrollStudent = async (enrollmentData) => {
   }
 };
 
-// Bulk enroll students
+// Bulk enroll students by emails
 export const bulkEnrollStudents = async (enrollmentData) => {
   try {
     const response = await api.post(`${ENROLLMENT_BASE}/bulk`, enrollmentData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ⭐ NEW: Bulk enroll students by IDs (for UI selection - FR-Admin-07)
+export const bulkEnrollStudentsByIds = async (enrollmentData) => {
+  try {
+    const response = await api.post(`${ENROLLMENT_BASE}/bulk-by-ids`, enrollmentData);
     return response.data;
   } catch (error) {
     throw error;
@@ -82,3 +92,34 @@ export const deleteEnrollment = async (enrollmentId) => {
     throw error;
   }
 };
+
+// Bulk upload students from file
+export const bulkUploadStudents = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post(`${ENROLLMENT_BASE}/bulk-upload-students`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Bulk enroll selected students in a course
+export const bulkEnrollSelectedStudents = async (studentIds, courseId) => {
+  try {
+    const response = await api.post(`${ENROLLMENT_BASE}/bulk-enroll-selected`, {
+      studentIds,
+      courseId
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+

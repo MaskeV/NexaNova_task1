@@ -1,4 +1,4 @@
-// frontend/src/components/Schedule/CreateSchedule.jsx
+// frontend/src/components/Schedule/CreateSchedule.jsx - UPDATED
 import React, { useState } from 'react';
 import { FaCalendarPlus } from 'react-icons/fa';
 
@@ -64,7 +64,7 @@ const CreateSchedule = ({ onSubmit, onCancel }) => {
         <div className="info-box">
           <p>
             ℹ️ A new blank weekly schedule will be created with all time slots available for allocation.
-            You can then assign trainers and modules to each slot.
+            You can then assign trainers and subjects to each slot.
           </p>
         </div>
 

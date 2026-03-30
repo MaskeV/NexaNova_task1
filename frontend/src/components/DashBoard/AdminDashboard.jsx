@@ -1,4 +1,4 @@
-// frontend/src/components/DashBoard/AdminDashboard.jsx — REPLACE ENTIRE FILE
+// frontend/src/components/DashBoard/AdminDashboard.jsx — FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -205,13 +205,14 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      let trainers = [], subjects = [], courses = [], enrollments = [];
+      let trainers = [], subjects = [], courses = [], students = [];
 
       await Promise.allSettled([
         axios.get(`${BASE}/trainer`, getHeaders()).then(r => { trainers = r.data?.data || []; }),
         axios.get(`${BASE}/subject`, getHeaders()).then(r => { subjects = r.data?.data || []; }),
         axios.get(`${BASE}/courses`, getHeaders()).then(r => { courses = r.data?.data || []; }),
-        axios.get(`${BASE}/enrollments`, getHeaders()).then(r => { enrollments = r.data?.data || []; }),
+        // FIXED: Fetch all students from /students endpoint
+        axios.get(`${BASE}/students`, getHeaders()).then(r => { students = r.data?.data || []; }),
       ]);
 
       // Build subjects map for enriching courses
@@ -230,15 +231,10 @@ const AdminDashboard = () => {
           .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
       }));
 
-      // Count unique students from enrollments
-      const uniqueStudents = new Set(
-        enrollments.map(e => e.studentEmail || e.studentId || e.student)
-      ).size;
-
       setData({
         totalTrainers: trainers.length,
         totalCourses: courses.length,
-        totalStudents: uniqueStudents,
+        totalStudents: students.length, // FIXED: Count all students
         recentTrainers: trainers.slice(0, 5),
         recentCourses: enrichedCourses.slice(0, 5),
       });
@@ -262,7 +258,7 @@ const AdminDashboard = () => {
     },
     {
       label: 'Total Students', value: data.totalStudents,
-      icon: <FaUserGraduate />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: null
+      icon: <FaUserGraduate />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: '/students'
     },
   ];
 

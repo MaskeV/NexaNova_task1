@@ -1,7 +1,7 @@
-// frontend/src/components/Enrollment/EnrollStudentForm.jsx
+// frontend/src/components/Enrollment/EnrollStudentForm.jsx - REPLACE ENTIRE FILE
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { getAllStudents } from '../../services/enrollmentService';
+import { getAllStudents } from '../../services/studentService';
 import { getAllCourses } from '../../services/courseServices';
 import MultiSelectDropdown from '../Common/MultiSelectDropdown';
 import { FaUserGraduate } from 'react-icons/fa';
@@ -12,43 +12,33 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
-    studentIds: [],
+    studentEmails: [],
     courseId: ''
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    fetchStudents();
-    fetchCourses();
+    fetchData();
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchData = async () => {
     try {
       setLoadingStudents(true);
-      const response = await getAllStudents();
-      console.log('📥 Fetched students:', response.data);
-      setStudents(response.data || []);
+      setLoadingCourses(true);
+      
+      const [studentsRes, coursesRes] = await Promise.all([
+        getAllStudents(),
+        getAllCourses()
+      ]);
+      
+      setStudents(studentsRes.data || []);
+      setCourses(coursesRes.data || []);
     } catch (error) {
-      console.error('❌ Error fetching students:', error);
-      toast.error('Failed to load students');
-      setStudents([]);
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoadingStudents(false);
-    }
-  };
-
-  const fetchCourses = async () => {
-    try {
-      setLoadingCourses(true);
-      const response = await getAllCourses();
-      console.log('📥 Fetched courses:', response.data);
-      setCourses(response.data || []);
-    } catch (error) {
-      console.error('❌ Error fetching courses:', error);
-      toast.error('Failed to load courses');
-      setCourses([]);
-    } finally {
       setLoadingCourses(false);
     }
   };
@@ -68,16 +58,16 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
     }
   };
 
-  const handleStudentsChange = (selectedIds) => {
+  const handleStudentsChange = (selectedEmails) => {
     setFormData(prev => ({
       ...prev,
-      studentIds: selectedIds
+      studentEmails: selectedEmails
     }));
     
-    if (errors.studentIds) {
+    if (errors.studentEmails) {
       setErrors(prev => ({
         ...prev,
-        studentIds: ''
+        studentEmails: ''
       }));
     }
   };
@@ -85,8 +75,8 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (formData.studentIds.length === 0) {
-      newErrors.studentIds = 'Please select at least one student';
+    if (formData.studentEmails.length === 0) {
+      newErrors.studentEmails = 'Please select at least one student';
     }
     
     if (!formData.courseId) {
@@ -107,39 +97,20 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
 
     setLoading(true);
     try {
-      // Convert student IDs to emails for enrollment
-      const selectedStudents = students.filter(s => formData.studentIds.includes(s._id));
-      const studentEmails = selectedStudents.map(s => s.email);
-      
-      console.log('📤 Enrolling students:', {
-        studentEmails,
-        courseId: formData.courseId,
-        studentCount: studentEmails.length
-      });
-
-      await onSubmit({
-        studentEmails,
-        courseId: formData.courseId
-      });
-
-      // Reset form on success
-      setFormData({
-        studentIds: [],
-        courseId: ''
-      });
-    } catch (error) {
-      console.error('❌ Enrollment submission error:', error);
+      await onSubmit(formData);
     } finally {
       setLoading(false);
     }
   };
 
-  // Transform students for dropdown
-  const studentOptions = students.map(student => ({
-    id: student._id,
-    name: student.username,
-    extra: student.email
-  }));
+  // Transform students for dropdown (using email as ID)
+  const studentOptions = students
+    .filter(s => s.isActive) // Only show active students
+    .map(student => ({
+      id: student.email,
+      name: student.username,
+      extra: student.email
+    }));
 
   return (
     <div className="enroll-student-form card">
@@ -158,27 +129,29 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
             </div>
           ) : courses.length === 0 ? (
             <div className="no-items-warning">
-              <p>⚠️ No courses available.</p>
-              <small>Please create courses first before enrolling students.</small>
+              <p>⚠️ No courses available yet.</p>
+              <small>Please create courses before enrolling students.</small>
             </div>
           ) : (
-            <select
-              name="courseId"
-              value={formData.courseId}
-              onChange={handleChange}
-              className={`form-control ${errors.courseId ? 'error' : ''}`}
-              disabled={loading}
-              required
-            >
-              <option value="">Choose a course...</option>
-              {courses.map(course => (
-                <option key={course.courseId} value={course.courseId}>
-                  {course.name} ({course.courseId}) - {course.level} - {course.duration} weeks
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                name="courseId"
+                value={formData.courseId}
+                onChange={handleChange}
+                className={`form-control ${errors.courseId ? 'error' : ''}`}
+                disabled={loading}
+                required
+              >
+                <option value="">Choose a course...</option>
+                {courses.map(course => (
+                  <option key={course.courseId} value={course.courseId}>
+                    {course.name} ({course.courseId}) - {course.level} - {course.duration} weeks
+                  </option>
+                ))}
+              </select>
+              {errors.courseId && <span className="error-text">{errors.courseId}</span>}
+            </>
           )}
-          {errors.courseId && <span className="error-text">{errors.courseId}</span>}
         </div>
 
         <div className="form-group">
@@ -194,12 +167,12 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
             </div>
           ) : (
             <MultiSelectDropdown
-              label="Select Students *"
+              label="Select Students * (One or Multiple)"
               options={studentOptions}
-              selectedValues={formData.studentIds}
+              selectedValues={formData.studentEmails}
               onChange={handleStudentsChange}
               placeholder="Search and select students..."
-              error={errors.studentIds}
+              error={errors.studentEmails}
               searchable={true}
             />
           )}
@@ -207,7 +180,7 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
 
         <div className="info-box">
           <p>
-            ℹ️ <strong>Note:</strong> You can select multiple students to enroll them in the same course.
+            ℹ️ <strong>Bulk Enrollment:</strong> You can select multiple students to enroll them all in the same course at once.
           </p>
         </div>
 
@@ -215,9 +188,16 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
           <button 
             type="submit" 
             className="btn btn-primary"
-            disabled={loading || formData.studentIds.length === 0 || !formData.courseId || students.length === 0 || courses.length === 0}
+            disabled={loading || formData.studentEmails.length === 0 || !formData.courseId || students.length === 0}
           >
-            {loading ? 'Enrolling...' : `✓ Enroll ${formData.studentIds.length} Student(s)`}
+            {loading ? (
+              <>
+                <span className="spinner-small"></span>
+                Enrolling...
+              </>
+            ) : (
+              `✓ Enroll ${formData.studentEmails.length} Student${formData.studentEmails.length !== 1 ? 's' : ''}`
+            )}
           </button>
           <button 
             type="button" 
@@ -256,7 +236,7 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
         }
 
         .no-items-warning {
-          padding: 1rem;
+          padding: 1.5rem;
           background: #fff3cd;
           border: 2px solid #ffc107;
           border-radius: 8px;
@@ -270,27 +250,6 @@ const EnrollStudentForm = ({ onSubmit, onCancel }) => {
 
         .no-items-warning small {
           color: #856404;
-        }
-
-        .info-box {
-          background: #e3f2fd;
-          border-left: 4px solid #2196f3;
-          padding: 1rem;
-          border-radius: 4px;
-          margin: 1rem 0;
-        }
-
-        .info-box p {
-          margin: 0;
-          color: #0d47a1;
-        }
-
-        .error-text {
-          color: #e74c3c;
-          font-size: 0.875rem;
-          font-weight: 600;
-          display: block;
-          margin-top: 0.5rem;
         }
       `}</style>
     </div>

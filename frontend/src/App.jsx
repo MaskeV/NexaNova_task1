@@ -15,6 +15,7 @@ import TrainerList from './components/Trainers/TrainerList';
 import SubjectList from './components/Subjects/SubjectList';
 import MyProfile from './components/Profile/MyProfile';
 import CourseList from './components/Courses/CourseList';
+import StudentManagement from './components/Student/StudentManagement';
 
 
 // Schedule Components (Admin only)

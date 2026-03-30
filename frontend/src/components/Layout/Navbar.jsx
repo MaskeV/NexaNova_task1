@@ -67,7 +67,9 @@ const Navbar = () => {
                   <FaUserGraduate style={{ marginRight: '0.5rem' }} />
                   Enrollments
                 </Link>
+                
               </>
+              
             )}
 
             {/* UPDATED: Trainer Only Menu */}
