@@ -24,14 +24,14 @@ const getWeekNumber = (date) => {
 const getWeekDates = (date) => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d.setDate(diff));
   monday.setHours(0, 0, 0, 0);
-  
+
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   sunday.setHours(23, 59, 59, 999);
-  
+
   return { start: monday, end: sunday };
 };
 
@@ -40,19 +40,19 @@ const createBlankTimeSlots = () => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const timeSlots = ['8AM-11AM', '11AM-2PM', '2PM-5PM', '5PM-8PM'];
   const slots = [];
-  
+
   days.forEach(day => {
     timeSlots.forEach(time => {
       slots.push({
         day,
         timeSlot: time,
-        subject: null, // CHANGED: subject instead of module
+        subject: null,
         trainer: null,
         isAllocated: false
       });
     });
   });
-  
+
   return slots;
 };
 
@@ -62,18 +62,18 @@ const createBlankTimeSlots = () => {
 const createSchedule = async (req, res) => {
   try {
     const { weekStartDate } = req.body;
-    
+
     if (!weekStartDate) {
       return res.status(400).json({
         success: false,
         message: 'Week start date is required'
       });
     }
-    
+
     const startDate = new Date(weekStartDate);
     const weekDates = getWeekDates(startDate);
     const weekId = generateWeekId(weekDates.start);
-    
+
     // Check if schedule already exists for this week
     const existingSchedule = await Schedule.findOne({ weekId });
     if (existingSchedule) {
@@ -82,11 +82,9 @@ const createSchedule = async (req, res) => {
         message: `Schedule for ${weekId} already exists`
       });
     }
-    
-    // Create blank time slots
+
     const timeSlots = createBlankTimeSlots();
-    
-    // Create schedule
+
     const schedule = await Schedule.create({
       weekId,
       weekStartDate: weekDates.start,
@@ -94,9 +92,9 @@ const createSchedule = async (req, res) => {
       timeSlots,
       createdBy: req.user._id
     });
-    
+
     console.log('✅ Schedule created:', weekId);
-    
+
     res.status(201).json({
       success: true,
       message: 'Schedule created successfully',
@@ -117,17 +115,15 @@ const createSchedule = async (req, res) => {
 const allocateSlot = async (req, res) => {
   try {
     const { slotId } = req.params;
-    const { weekId, trainerId, subjectId } = req.body; // CHANGED: subjectId instead of moduleId
-    
-    // Validation
+    const { weekId, trainerId, subjectId } = req.body;
+
     if (!weekId || !trainerId || !subjectId) {
       return res.status(400).json({
         success: false,
         message: 'Week ID, trainer ID, and subject ID are required'
       });
     }
-    
-    // Find schedule
+
     const schedule = await Schedule.findOne({ weekId });
     if (!schedule) {
       return res.status(404).json({
@@ -135,8 +131,7 @@ const allocateSlot = async (req, res) => {
         message: 'Schedule not found'
       });
     }
-    
-    // Find the time slot
+
     const slot = schedule.timeSlots.id(slotId);
     if (!slot) {
       return res.status(404).json({
@@ -144,16 +139,15 @@ const allocateSlot = async (req, res) => {
         message: 'Time slot not found'
       });
     }
-    
-    // Check if slot is already allocated
+
     if (slot.isAllocated) {
       return res.status(400).json({
         success: false,
         message: 'Time slot is already allocated'
       });
     }
-    
-    // Verify trainer exists
+
+    // Verify trainer exists by empId (string key, NOT ObjectId)
     const trainer = await Trainer.findOne({ empId: trainerId });
     if (!trainer) {
       return res.status(404).json({
@@ -161,7 +155,7 @@ const allocateSlot = async (req, res) => {
         message: 'Trainer not found'
       });
     }
-    
+
     // Verify subject exists
     const subject = await Subject.findOne({ subjectId });
     if (!subject) {
@@ -170,7 +164,7 @@ const allocateSlot = async (req, res) => {
         message: 'Subject not found'
       });
     }
-    
+
     // Check if trainer teaches this subject
     if (!trainer.subjects.includes(subjectId)) {
       return res.status(400).json({
@@ -178,32 +172,31 @@ const allocateSlot = async (req, res) => {
         message: `Trainer ${trainer.name} does not teach ${subject.name}`
       });
     }
-    
-    // Check if trainer is already allocated in the same time slot
+
+    // Check for trainer conflict in the same day/time slot
     const conflictSlot = schedule.timeSlots.find(
-      s => s.day === slot.day && 
-           s.timeSlot === slot.timeSlot && 
+      s => s.day === slot.day &&
+           s.timeSlot === slot.timeSlot &&
            s.trainer === trainerId &&
            s.isAllocated &&
            s._id.toString() !== slotId
     );
-    
+
     if (conflictSlot) {
       return res.status(400).json({
         success: false,
         message: `Trainer is already allocated on ${slot.day} at ${slot.timeSlot}`
       });
     }
-    
-    // Allocate the slot
+
     slot.trainer = trainerId;
-    slot.subject = subjectId; // CHANGED: subject instead of module
+    slot.subject = subjectId;
     slot.isAllocated = true;
-    
+
     await schedule.save();
-    
+
     console.log('✅ Slot allocated:', slotId);
-    
+
     res.status(200).json({
       success: true,
       message: 'Slot allocated successfully',
@@ -224,40 +217,53 @@ const allocateSlot = async (req, res) => {
 const getScheduleByWeek = async (req, res) => {
   try {
     const { weekId } = req.params;
-    
-    const schedule = await Schedule.findOne({ weekId })
-      .populate({
-        path: 'timeSlots.trainer',
-        select: 'empId name email experience'
-      });
-    
+
+    // FIXED: Do NOT use .populate() — trainer & subject are stored as strings (empId / subjectId),
+    // not ObjectIds. Mongoose cannot cast "EMP101" to ObjectId, causing CastError.
+    const schedule = await Schedule.findOne({ weekId });
+
     if (!schedule) {
       return res.status(404).json({
         success: false,
         message: 'Schedule not found'
       });
     }
-    
-    // Populate subject details manually (since it's a string reference)
+
+    // Manually resolve trainer and subject details using their string IDs
     const populatedSlots = await Promise.all(
       schedule.timeSlots.map(async (slot) => {
+        const slotObj = slot.toObject();
+
         if (slot.subject) {
           const subject = await Subject.findOne({ subjectId: slot.subject });
-          return {
-            ...slot.toObject(),
-            subjectDetails: subject ? {
-              subjectId: subject.subjectId,
-              name: subject.name,
-              description: subject.description,
-              level: subject.level,
-              totalDuration: subject.totalDuration
-            } : null
-          };
+          slotObj.subjectDetails = subject
+            ? {
+                subjectId: subject.subjectId,
+                name: subject.name,
+                description: subject.description,
+                level: subject.level,
+                totalDuration: subject.totalDuration
+              }
+            : null;
         }
-        return slot.toObject();
+
+        if (slot.trainer) {
+          // Query by empId (string), NOT by _id
+          const trainer = await Trainer.findOne({ empId: slot.trainer });
+          slotObj.trainerDetails = trainer
+            ? {
+                empId: trainer.empId,
+                name: trainer.name,
+                email: trainer.email,
+                experience: trainer.experience
+              }
+            : null;
+        }
+
+        return slotObj;
       })
     );
-    
+
     res.status(200).json({
       success: true,
       data: {
@@ -282,7 +288,7 @@ const getAllSchedules = async (req, res) => {
     const schedules = await Schedule.find()
       .sort({ weekStartDate: -1 })
       .select('weekId weekStartDate weekEndDate createdAt');
-    
+
     res.status(200).json({
       success: true,
       count: schedules.length,
@@ -303,18 +309,18 @@ const getAllSchedules = async (req, res) => {
 const deleteSchedule = async (req, res) => {
   try {
     const { weekId } = req.params;
-    
+
     const schedule = await Schedule.findOneAndDelete({ weekId });
-    
+
     if (!schedule) {
       return res.status(404).json({
         success: false,
         message: 'Schedule not found'
       });
     }
-    
+
     console.log('✅ Schedule deleted:', weekId);
-    
+
     res.status(200).json({
       success: true,
       message: 'Schedule deleted successfully',
@@ -336,14 +342,14 @@ const deallocateSlot = async (req, res) => {
   try {
     const { slotId } = req.params;
     const { weekId } = req.body;
-    
+
     if (!weekId) {
       return res.status(400).json({
         success: false,
         message: 'Week ID is required'
       });
     }
-    
+
     const schedule = await Schedule.findOne({ weekId });
     if (!schedule) {
       return res.status(404).json({
@@ -351,7 +357,7 @@ const deallocateSlot = async (req, res) => {
         message: 'Schedule not found'
       });
     }
-    
+
     const slot = schedule.timeSlots.id(slotId);
     if (!slot) {
       return res.status(404).json({
@@ -359,16 +365,15 @@ const deallocateSlot = async (req, res) => {
         message: 'Time slot not found'
       });
     }
-    
-    // Deallocate the slot
+
     slot.trainer = null;
-    slot.subject = null; // CHANGED: subject instead of module
+    slot.subject = null;
     slot.isAllocated = false;
-    
+
     await schedule.save();
-    
+
     console.log('✅ Slot deallocated:', slotId);
-    
+
     res.status(200).json({
       success: true,
       message: 'Slot deallocated successfully',

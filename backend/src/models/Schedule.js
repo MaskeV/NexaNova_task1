@@ -1,4 +1,4 @@
-// backend/src/models/Schedule.js - FIXED: Remove scheduleId, use subject/course instead of module
+// backend/src/models/Schedule.js
 const mongoose = require('mongoose');
 
 const timeSlotSchema = new mongoose.Schema({
@@ -18,14 +18,13 @@ const timeSlotSchema = new mongoose.Schema({
       message: 'Time slot must be one of the four 3-hour slots'
     }
   },
-  // CHANGED: Use subject/course instead of module
   subject: {
-    type: String, // subjectId reference
+    type: String,   // stores subjectId string, NOT ObjectId
     ref: 'Subject',
     default: null
   },
   trainer: {
-    type: String, // empId reference
+    type: String,   // stores empId string, NOT ObjectId
     ref: 'Trainer',
     default: null
   },
@@ -33,16 +32,17 @@ const timeSlotSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   }
-}, {
-  _id: true
-});
+}, { _id: true });
 
 const scheduleSchema = new mongoose.Schema({
   weekId: {
     type: String,
     required: [true, 'Week ID is required'],
-    unique: true,
+    unique: true,   // this already creates a unique index called weekId_1
     trim: true
+    // DO NOT add scheduleSchema.index({ weekId: 1 }) below —
+    // that would try to create a second non-unique index with the same
+    // name "weekId_1", causing IndexKeySpecsConflict on syncIndexes
   },
   weekStartDate: {
     type: Date,
@@ -58,39 +58,39 @@ const scheduleSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Index for faster queries
-scheduleSchema.index({ weekId: 1 });
+// Only indexes that are NOT already implied by the schema definition above.
+// weekId_1 is already created by unique:true — do NOT repeat it here.
 scheduleSchema.index({ weekStartDate: 1 });
 scheduleSchema.index({ 'timeSlots.trainer': 1 });
-scheduleSchema.index({ 'timeSlots.subject': 1 }); // CHANGED: subject instead of module
+scheduleSchema.index({ 'timeSlots.subject': 1 });
 
-// Method to check if a slot is available
-scheduleSchema.methods.isSlotAvailable = function(day, timeSlot) {
-  const slot = this.timeSlots.find(
-    s => s.day === day && s.timeSlot === timeSlot
-  );
+// ── Instance methods ──────────────────────────────────────────────────────────
+
+scheduleSchema.methods.isSlotAvailable = function (day, timeSlot) {
+  const slot = this.timeSlots.find(s => s.day === day && s.timeSlot === timeSlot);
   return slot && !slot.isAllocated;
 };
 
-// Method to allocate a slot
-scheduleSchema.methods.allocateSlot = function(slotId, trainerId, subjectId) {
+scheduleSchema.methods.allocateSlot = function (slotId, trainerId, subjectId) {
   const slot = this.timeSlots.id(slotId);
-  if (!slot) {
-    throw new Error('Time slot not found');
-  }
-  if (slot.isAllocated) {
-    throw new Error('Time slot is already allocated');
-  }
-  
+  if (!slot) throw new Error('Time slot not found');
+  if (slot.isAllocated) throw new Error('Time slot is already allocated');
   slot.trainer = trainerId;
-  slot.subject = subjectId; // CHANGED: subject instead of module
+  slot.subject = subjectId;
   slot.isAllocated = true;
-  
   return slot;
 };
 
-module.exports = mongoose.model('Schedule', scheduleSchema);
+// ── Model + index sync ────────────────────────────────────────────────────────
+
+const Schedule = mongoose.model('Schedule', scheduleSchema);
+
+// syncIndexes drops stale indexes (e.g. old scheduleId_1) and creates any
+// missing ones. Safe to run on every startup.
+Schedule.syncIndexes()
+  .then(() => console.log('✅ Schedule indexes synced'))
+  .catch(err => console.error('❌ Schedule syncIndexes error:', err.message));
+
+module.exports = Schedule;
