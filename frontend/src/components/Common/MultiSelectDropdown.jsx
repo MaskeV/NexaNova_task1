@@ -1,28 +1,23 @@
 // src/components/Common/MultiSelectDropdown.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { FaSearch, FaTimes, FaCheck } from 'react-icons/fa';
 
 const MultiSelectDropdown = ({ 
+  label, 
   options = [], 
   selectedValues = [], 
   onChange, 
-  placeholder = "Select items...",
-  label,
-  error,
-  disabled = false,
-  searchable = true,
-  className = ""
+  placeholder = 'Select options...', 
+  error = '',
+  searchable = false 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
-        setSearchTerm('');
       }
     };
 
@@ -30,349 +25,260 @@ const MultiSelectDropdown = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter options based on search
-  const filteredOptions = searchable && searchTerm
-    ? options.filter(option => 
-        option.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        option.id.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : options;
-
   const handleToggle = (optionId) => {
-    const newSelection = selectedValues.includes(optionId)
+    const newValues = selectedValues.includes(optionId)
       ? selectedValues.filter(id => id !== optionId)
       : [...selectedValues, optionId];
-    onChange(newSelection);
+    onChange(newValues);
   };
 
   const handleSelectAll = () => {
-    onChange(filteredOptions.map(opt => opt.id));
+    onChange(options.map(opt => opt.id));
   };
 
   const handleClearAll = () => {
     onChange([]);
   };
 
-  const handleRemoveItem = (optionId, e) => {
-    e.stopPropagation();
-    onChange(selectedValues.filter(id => id !== optionId));
-  };
+  const filteredOptions = searchable
+    ? options.filter(opt => 
+        opt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        opt.id.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : options;
 
-  const getSelectedItems = () => {
-    return options.filter(opt => selectedValues.includes(opt.id));
+  const getSelectedNames = () => {
+    return options
+      .filter(opt => selectedValues.includes(opt.id))
+      .map(opt => opt.name);
   };
 
   return (
-    <div className={`multi-select-container ${className}`} ref={dropdownRef}>
-      {label && <label className="multi-select-label">{label}</label>}
+    <div className="multi-select-dropdown" ref={dropdownRef}>
+      {label && <label className="dropdown-label">{label}</label>}
       
       <div 
-        className={`multi-select-trigger ${error ? 'error' : ''} ${isOpen ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`dropdown-toggle ${error ? 'error' : ''} ${isOpen ? 'open' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="trigger-content">
+        <div className="selected-display">
           {selectedValues.length === 0 ? (
             <span className="placeholder">{placeholder}</span>
           ) : (
-            <div className="selected-items-preview">
-              {getSelectedItems().slice(0, 2).map(item => (
-                <span key={item.id} className="selected-chip">
-                  {item.name}
-                  <button
-                    type="button"
-                    className="chip-remove"
-                    onClick={(e) => handleRemoveItem(item.id, e)}
-                    disabled={disabled}
-                  >
-                    <FaTimes size={10} />
-                  </button>
-                </span>
-              ))}
-              {selectedValues.length > 2 && (
-                <span className="more-count">+{selectedValues.length - 2} more</span>
-              )}
-            </div>
+            <span className="selected-count">
+              {selectedValues.length} selected
+            </span>
           )}
         </div>
-        <div className="trigger-arrow">
-          {isOpen ? '▲' : '▼'}
-        </div>
+        <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
       </div>
 
-      {error && <span className="error-text">{error}</span>}
+      {error && <span className="error-message">{error}</span>}
 
       {isOpen && (
-        <div className="multi-select-dropdown">
-          {searchable && (
-            <div className="dropdown-search">
-              <FaSearch className="search-icon" />
+        <div className="dropdown-menu">
+          <div className="dropdown-header">
+            {searchable && (
               <input
                 type="text"
+                className="dropdown-search"
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                autoFocus
               />
-              {searchTerm && (
-                <button
-                  type="button"
-                  className="clear-search"
-                  onClick={() => setSearchTerm('')}
-                >
-                  <FaTimes />
-                </button>
-              )}
+            )}
+            <div className="dropdown-actions">
+              <button type="button" onClick={handleSelectAll} className="action-btn">
+                Select All
+              </button>
+              <button type="button" onClick={handleClearAll} className="action-btn">
+                Clear All
+              </button>
             </div>
-          )}
-
-          <div className="dropdown-actions">
-            <button type="button" onClick={handleSelectAll}>
-              Select All {filteredOptions.length > 0 && `(${filteredOptions.length})`}
-            </button>
-            <button type="button" onClick={handleClearAll}>
-              Clear All
-            </button>
           </div>
 
           <div className="dropdown-options">
             {filteredOptions.length === 0 ? (
-              <div className="no-results">
-                {searchTerm ? 'No items found' : 'No items available'}
-              </div>
+              <div className="no-options">No options found</div>
             ) : (
-              filteredOptions.map(option => {
-                const isSelected = selectedValues.includes(option.id);
-                return (
-                  <div
-                    key={option.id}
-                    className={`dropdown-option ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleToggle(option.id)}
-                  >
-                    <div className="option-checkbox">
-                      {isSelected && <FaCheck size={12} />}
-                    </div>
-                    <div className="option-content">
-                      <div className="option-name">{option.name}</div>
-                      <div className="option-meta">{option.id}</div>
-                      {option.extra && (
-                        <div className="option-extra">{option.extra}</div>
-                      )}
-                    </div>
+              filteredOptions.map((option) => (
+                <div
+                  key={option.id}
+                  className={`dropdown-option ${selectedValues.includes(option.id) ? 'selected' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggle(option.id);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedValues.includes(option.id)}
+                    onChange={() => {}}
+                    className="option-checkbox"
+                  />
+                  <div className="option-content">
+                    <div className="option-name">{option.name}</div>
+                    {option.extra && <div className="option-extra">{option.extra}</div>}
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
-          </div>
-
-          <div className="dropdown-footer">
-            <span className="selection-count">
-              {selectedValues.length} item(s) selected
-            </span>
           </div>
         </div>
       )}
 
+      {selectedValues.length > 0 && (
+        <div className="selected-tags">
+          {getSelectedNames().map((name, index) => (
+            <span key={index} className="tag">
+              {name}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const option = options.find(opt => opt.name === name);
+                  if (option) handleToggle(option.id);
+                }}
+                className="tag-remove"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <style jsx>{`
-        .multi-select-container {
+        .multi-select-dropdown {
           position: relative;
           width: 100%;
         }
 
-        .multi-select-label {
+        .dropdown-label {
           display: block;
-          margin-bottom: 0.5rem;
           font-weight: 600;
+          margin-bottom: 0.5rem;
           color: #333;
+          font-size: 0.95rem;
         }
 
-        .multi-select-trigger {
+        .dropdown-toggle {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          min-height: 45px;
-          padding: 0.5rem 0.75rem;
-          border: 2px solid #ddd;
+          padding: 0.75rem 1rem;
+          border: 2px solid #e0e0e0;
           border-radius: 8px;
           background: white;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
         }
 
-        .multi-select-trigger:hover:not(.disabled) {
+        .dropdown-toggle:hover {
           border-color: #667eea;
         }
 
-        .multi-select-trigger.open {
+        .dropdown-toggle.open {
           border-color: #667eea;
           box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .multi-select-trigger.error {
+        .dropdown-toggle.error {
           border-color: #e74c3c;
         }
 
-        .multi-select-trigger.disabled {
-          background: #f5f5f5;
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-
-        .trigger-content {
+        .selected-display {
           flex: 1;
-          min-width: 0;
         }
 
         .placeholder {
           color: #999;
         }
 
-        .selected-items-preview {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.4rem;
-        }
-
-        .selected-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.3rem;
-          padding: 0.25rem 0.5rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border-radius: 12px;
-          font-size: 0.85rem;
+        .selected-count {
+          color: #333;
           font-weight: 500;
         }
 
-        .chip-remove {
-          background: rgba(255, 255, 255, 0.2);
-          border: none;
-          color: white;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .chip-remove:hover {
-          background: rgba(255, 255, 255, 0.4);
-        }
-
-        .more-count {
-          padding: 0.25rem 0.5rem;
-          background: #e9ecef;
+        .dropdown-arrow {
           color: #666;
-          border-radius: 12px;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-
-        .trigger-arrow {
-          color: #666;
-          font-size: 0.75rem;
+          font-size: 0.8rem;
           margin-left: 0.5rem;
-          transition: transform 0.2s;
         }
 
-        .multi-select-dropdown {
+        .error-message {
+          color: #e74c3c;
+          font-size: 0.875rem;
+          font-weight: 600;
+          display: block;
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: #fff5f5;
+          border-left: 3px solid #e74c3c;
+          border-radius: 4px;
+        }
+
+        .dropdown-menu {
           position: absolute;
-          top: calc(100% + 4px);
+          top: 100%;
           left: 0;
           right: 0;
+          margin-top: 0.5rem;
           background: white;
-          border: 2px solid #667eea;
+          border: 2px solid #e0e0e0;
           border-radius: 8px;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           z-index: 1000;
           max-height: 400px;
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-          animation: dropdownSlide 0.2s ease;
         }
 
-        @keyframes dropdownSlide {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .dropdown-header {
+          padding: 1rem;
+          border-bottom: 1px solid #e0e0e0;
+          background: #f8f9fa;
         }
 
         .dropdown-search {
-          position: relative;
-          padding: 0.75rem;
-          border-bottom: 1px solid #e9ecef;
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 1.25rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #999;
-        }
-
-        .dropdown-search input {
           width: 100%;
-          padding: 0.5rem 2.5rem 0.5rem 2.5rem;
-          border: 1px solid #ddd;
+          padding: 0.5rem;
+          border: 1px solid #e0e0e0;
           border-radius: 6px;
-          font-size: 0.9rem;
+          margin-bottom: 0.75rem;
+          font-size: 0.95rem;
         }
 
-        .dropdown-search input:focus {
+        .dropdown-search:focus {
           outline: none;
           border-color: #667eea;
-        }
-
-        .clear-search {
-          position: absolute;
-          right: 1.25rem;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          color: #999;
-          cursor: pointer;
-          padding: 0.25rem;
         }
 
         .dropdown-actions {
           display: flex;
           gap: 0.5rem;
-          padding: 0.5rem 0.75rem;
-          border-bottom: 1px solid #e9ecef;
-          background: #f8f9fa;
         }
 
-        .dropdown-actions button {
+        .action-btn {
           flex: 1;
-          padding: 0.4rem 0.75rem;
-          border: 1px solid #ddd;
+          padding: 0.5rem;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
           background: white;
-          border-radius: 4px;
-          font-size: 0.85rem;
-          font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
         }
 
-        .dropdown-actions button:hover {
-          background: #667eea;
-          color: white;
+        .action-btn:hover {
+          background: #f0f0f0;
           border-color: #667eea;
         }
 
         .dropdown-options {
-          flex: 1;
           overflow-y: auto;
           max-height: 250px;
         }
@@ -380,11 +286,10 @@ const MultiSelectDropdown = ({
         .dropdown-option {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem;
+          padding: 0.75rem 1rem;
           cursor: pointer;
-          transition: background 0.2s;
-          border-bottom: 1px solid #f5f5f5;
+          transition: background 0.2s ease;
+          border-bottom: 1px solid #f0f0f0;
         }
 
         .dropdown-option:hover {
@@ -392,88 +297,73 @@ const MultiSelectDropdown = ({
         }
 
         .dropdown-option.selected {
-          background: #e8f5e9;
+          background: #e8eaf6;
         }
 
         .option-checkbox {
-          width: 20px;
-          height: 20px;
-          border: 2px solid #ddd;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: all 0.2s;
-        }
-
-        .dropdown-option.selected .option-checkbox {
-          background: #667eea;
-          border-color: #667eea;
-          color: white;
+          margin-right: 0.75rem;
+          cursor: pointer;
         }
 
         .option-content {
           flex: 1;
-          min-width: 0;
         }
 
         .option-name {
           font-weight: 500;
           color: #333;
-          margin-bottom: 0.1rem;
-        }
-
-        .option-meta {
-          font-size: 0.85rem;
-          color: #666;
         }
 
         .option-extra {
-          font-size: 0.8rem;
-          color: #999;
-          margin-top: 0.2rem;
+          font-size: 0.85rem;
+          color: #666;
+          margin-top: 0.25rem;
         }
 
-        .no-results {
-          padding: 2rem;
+        .no-options {
+          padding: 1.5rem;
           text-align: center;
           color: #999;
         }
 
-        .dropdown-footer {
-          padding: 0.5rem 0.75rem;
-          border-top: 1px solid #e9ecef;
-          background: #f8f9fa;
-          font-size: 0.85rem;
-          color: #666;
+        .selected-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          margin-top: 0.75rem;
+        }
+
+        .tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.4rem 0.75rem;
+          background: #e8eaf6;
+          color: #667eea;
+          border-radius: 20px;
+          font-size: 0.875rem;
           font-weight: 500;
         }
 
-        .error-text {
-          color: #e74c3c;
-          font-size: 0.875rem;
-          font-weight: 600;
-          display: block;
-          margin-top: 0.5rem;
+        .tag-remove {
+          background: none;
+          border: none;
+          color: #667eea;
+          font-size: 1.25rem;
+          line-height: 1;
+          cursor: pointer;
+          padding: 0;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: background 0.2s ease;
         }
 
-        /* Scrollbar styling */
-        .dropdown-options::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .dropdown-options::-webkit-scrollbar-track {
-          background: #f1f1f1;
-        }
-
-        .dropdown-options::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 4px;
-        }
-
-        .dropdown-options::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
+        .tag-remove:hover {
+          background: rgba(102, 126, 234, 0.2);
         }
       `}</style>
     </div>

@@ -79,7 +79,7 @@ const Login = () => {
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-card-header">
-            <h1>Welcome Back</h1>
+            <h1>Sign in</h1>
             <p>Sign in to your NexaNova account</p>
           </div>
 

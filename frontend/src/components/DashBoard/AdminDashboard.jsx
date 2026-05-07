@@ -254,11 +254,11 @@ const AdminDashboard = () => {
     },
     {
       label: 'Total Courses', value: data.totalCourses,
-      icon: <FaGraduationCap />, gradient: 'linear-gradient(135deg,#10b981,#059669)', to: '/courses'
+      icon: <FaUsers />, gradient: 'linear-gradient(135deg,#10b981,#059669)', to: '/courses'
     },
     {
       label: 'Total Students', value: data.totalStudents,
-      icon: <FaUserGraduate />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: '/students'
+      icon: <FaUsers />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: '/students'
     },
   ];
 

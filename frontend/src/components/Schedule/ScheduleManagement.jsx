@@ -179,7 +179,7 @@ const ScheduleManagement = () => {
         {
           weekId: selectedSchedule,
           trainerId: selectedTrainer,
-          moduleId: selectedSubject // Backend expects "moduleId" but it's actually subjectId
+          subjectId: selectedSubject // Backend expects "moduleId" but it's actually subjectId
         },
         getHeaders()
       );

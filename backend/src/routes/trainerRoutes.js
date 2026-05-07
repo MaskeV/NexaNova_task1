@@ -12,7 +12,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Apply protect middleware to all routes
 router.use(protect);
-
+    
 // /trainer routes
 router.post('/', authorize('admin'), addTrainer);
 router.get('/', getAllTrainers);

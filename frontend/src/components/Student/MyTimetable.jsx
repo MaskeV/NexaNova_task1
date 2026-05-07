@@ -33,10 +33,10 @@ const MyTimetable = () => {
 
   const getLevelColor = (level) => {
     switch (level?.toLowerCase()) {
-      case 'beginner': return '#4caf50';
+      case 'beginner':     return '#4caf50';
       case 'intermediate': return '#ff9800';
-      case 'advanced': return '#f44336';
-      default: return '#666';
+      case 'advanced':     return '#f44336';
+      default:             return '#666';
     }
   };
 
@@ -52,14 +52,14 @@ const MyTimetable = () => {
           <FaCalendarAlt size={60} color="#ccc" />
           <h3>No Timetable Available</h3>
           <p>No schedule has been created for the current week yet.</p>
-          <div className="info-box" style={{ marginTop: '2rem', textAlign: 'left' }}>
+          <div className="info-box">
             <p><strong>Possible reasons:</strong></p>
             <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
               <li>Administrator hasn't created a schedule for this week</li>
               <li>You may not be enrolled in any courses</li>
               <li>No classes have been scheduled for your courses</li>
             </ul>
-            <p style={{ marginTop: '1rem' }}>Please contact your administrator for more information.</p>
+            <p style={{ marginTop: '1rem' }}>Please contact your administrator.</p>
           </div>
         </div>
       </div>
@@ -73,21 +73,18 @@ const MyTimetable = () => {
           <h1>📅 My Class Timetable</h1>
           <p>Week: <strong>{timetable.weekId}</strong></p>
           <p className="date-range">
-            {new Date(timetable.weekStartDate).toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })} - {' '}
-            {new Date(timetable.weekEndDate).toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
+            {new Date(timetable.weekStartDate).toLocaleDateString('en-US', {
+              month: 'long', day: 'numeric', year: 'numeric'
+            })}
+            {' – '}
+            {new Date(timetable.weekEndDate).toLocaleDateString('en-US', {
+              month: 'long', day: 'numeric', year: 'numeric'
             })}
           </p>
         </div>
       </div>
 
-      {timetable.enrolledCourses && timetable.enrolledCourses.length > 0 && (
+      {timetable.enrolledCourses?.length > 0 && (
         <div className="enrolled-courses card">
           <h3>📚 My Enrolled Courses ({timetable.enrolledCourses.length})</h3>
           <div className="course-chips">
@@ -95,9 +92,9 @@ const MyTimetable = () => {
               <div key={course.subjectId} className="course-chip">
                 <FaBook />
                 <span>{course.name}</span>
-                <span 
+                <span
                   className="course-level"
-                  style={{ 
+                  style={{
                     background: `${getLevelColor(course.level)}33`,
                     color: getLevelColor(course.level)
                   }}
@@ -115,9 +112,9 @@ const MyTimetable = () => {
           <FaCalendarAlt size={60} color="#ccc" />
           <h3>No Classes Scheduled</h3>
           <p>You don't have any classes scheduled for this week.</p>
-          {timetable.enrolledCourses && timetable.enrolledCourses.length > 0 && (
+          {timetable.enrolledCourses?.length > 0 && (
             <p style={{ marginTop: '1rem', color: '#666' }}>
-              You are enrolled in courses, but classes haven't been scheduled yet. 
+              You are enrolled in courses, but classes haven't been scheduled yet.
               Please check back later or contact your administrator.
             </p>
           )}
@@ -128,7 +125,7 @@ const MyTimetable = () => {
             {timetable.timetable.map(daySchedule => (
               <div key={daySchedule.day} className="day-schedule card">
                 <h3 className="day-header">{daySchedule.day}</h3>
-                
+
                 {daySchedule.slots.length === 0 ? (
                   <div className="no-classes">
                     <p>No classes scheduled</p>
@@ -137,30 +134,34 @@ const MyTimetable = () => {
                   <div className="time-slots">
                     {daySchedule.slots.map(slot => (
                       <div key={slot._id} className="time-slot">
+
+                        {/* Time */}
                         <div className="slot-time">
                           <FaClock />
                           <span>{slot.timeSlot}</span>
                         </div>
-                        
+
+                        {/* Subject — backend returns slot.subject (not slot.module) */}
                         <div className="slot-module">
                           <FaBook />
                           <div>
-                            <strong>{slot.module.name}</strong>
-                            {slot.module.level && (
-                              <small style={{ 
-                                background: `${getLevelColor(slot.module.level)}22`,
-                                color: getLevelColor(slot.module.level),
+                            <strong>{slot.subject?.name || 'Unknown Subject'}</strong>
+                            {slot.subject?.level && (
+                              <small style={{
+                                background: `${getLevelColor(slot.subject.level)}22`,
+                                color: getLevelColor(slot.subject.level),
                                 padding: '0.2rem 0.6rem',
                                 borderRadius: '12px',
                                 display: 'inline-block',
                                 marginTop: '0.25rem'
                               }}>
-                                {slot.module.level}
+                                {slot.subject.level}
                               </small>
                             )}
                           </div>
                         </div>
-                        
+
+                        {/* Trainer */}
                         {slot.trainer && (
                           <div className="slot-trainer">
                             <FaUser />
@@ -213,15 +214,8 @@ const MyTimetable = () => {
           border-radius: 4px;
           margin-top: 1rem;
         }
-
-        .info-box p {
-          margin: 0.5rem 0;
-          color: #0d47a1;
-        }
-
-        .info-box ul {
-          color: #1565c0;
-        }
+        .info-box p { margin: 0.5rem 0; color: #0d47a1; }
+        .info-box ul { color: #1565c0; }
       `}</style>
     </div>
   );
