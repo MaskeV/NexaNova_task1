@@ -1,9 +1,8 @@
-// src/components/Trainers/AddTrainer.jsx
-import React, { useState, useEffect } from 'react';
+// src/components/Trainers/AddTrainer.jsx - FIXED VERSION WITH DEBUG
+import React, { useState, useEffect, useRef } from 'react';
 import { addTrainer, getAllTrainers } from '../../services/trainerService';
 import { getAllSubjects } from '../../services/subjectService';
 import { toast } from 'react-toastify';
-import MultiSelectDropdown from '../Common/MultiSelectDropdown';
 
 const AddTrainer = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -18,20 +17,69 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
   const [errors, setErrors] = useState({});
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     generateEmpId();
     fetchAvailableSubjects();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const fetchAvailableSubjects = async () => {
     try {
       setLoadingSubjects(true);
+      console.log('🔍 Fetching subjects...');
+      
       const response = await getAllSubjects();
-      setAvailableSubjects(response.data);
+      console.log('📦 Raw API response:', response);
+      console.log('📊 Response.data:', response.data);
+      
+      // ✅ Handle different response formats
+      let subjects = [];
+      
+      if (Array.isArray(response.data)) {
+        subjects = response.data;
+      } else if (response.data && Array.isArray(response.data.subjects)) {
+        subjects = response.data.subjects;
+      } else if (response && Array.isArray(response)) {
+        subjects = response;
+      }
+      
+      console.log('✅ Processed subjects:', subjects);
+      console.log('📏 Number of subjects:', subjects.length);
+      
+      // Filter out any invalid entries
+      const validSubjects = subjects.filter(s => s && s.subjectId && s.name);
+      console.log('✅ Valid subjects after filtering:', validSubjects);
+      
+      setAvailableSubjects(validSubjects);
+      
+      if (validSubjects.length === 0) {
+        console.warn('⚠️ No valid subjects found');
+        toast.warning('No subjects available. Please add subjects first.');
+      } else {
+        console.log(`✅ Loaded ${validSubjects.length} subjects successfully`);
+      }
     } catch (error) {
-      console.error('Failed to fetch subjects:', error);
-      toast.error('Failed to load subjects');
+      console.error('❌ Failed to fetch subjects:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      
+      toast.error('Failed to load subjects. Please try again.');
+      setAvailableSubjects([]);
     } finally {
       setLoadingSubjects(false);
     }
@@ -40,14 +88,16 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
   const generateEmpId = async () => {
     try {
       const response = await getAllTrainers();
-      const trainers = response.data;
+      const trainers = response.data || [];
       
       let maxNum = 0;
       trainers.forEach(trainer => {
-        const match = trainer.empId.match(/EMP(\d+)/);
-        if (match) {
-          const num = parseInt(match[1]);
-          if (num > maxNum) maxNum = num;
+        if (trainer.empId) {
+          const match = trainer.empId.match(/EMP(\d+)/);
+          if (match) {
+            const num = parseInt(match[1]);
+            if (num > maxNum) maxNum = num;
+          }
         }
       });
 
@@ -75,10 +125,19 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
     }
   };
 
-  const handleSubjectsChange = (selectedSubjects) => {
+  const handleSubjectToggle = (subjectId) => {
+    const currentSubjects = [...formData.subjects];
+    const index = currentSubjects.indexOf(subjectId);
+    
+    if (index === -1) {
+      currentSubjects.push(subjectId);
+    } else {
+      currentSubjects.splice(index, 1);
+    }
+    
     setFormData({
       ...formData,
-      subjects: selectedSubjects
+      subjects: currentSubjects
     });
     
     if (errors.subjects) {
@@ -89,11 +148,65 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
     }
   };
 
+  const handleSelectAll = () => {
+    const allSubjectIds = availableSubjects.map(subject => subject.subjectId);
+    setFormData({
+      ...formData,
+      subjects: allSubjectIds
+    });
+  };
+
+  const handleClearAll = () => {
+    setFormData({
+      ...formData,
+      subjects: []
+    });
+  };
+
+  const toggleDropdown = () => {
+    if (availableSubjects.length > 0) {
+      setDropdownOpen(!dropdownOpen);
+    }
+  };
+
+  const removeSubject = (subjectId) => {
+    const updatedSubjects = formData.subjects.filter(id => id !== subjectId);
+    setFormData({
+      ...formData,
+      subjects: updatedSubjects
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Clear previous errors
     setErrors({});
+
+    // Client-side validation
+    const newErrors = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    }
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    }
+    if (formData.subjects.length === 0) {
+      newErrors.subjects = 'At least one subject must be selected';
+    }
+    if (!formData.experience || parseInt(formData.experience) < 1) {
+      newErrors.experience = 'Experience must be at least 1 year';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('Please fill all required fields correctly');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -136,13 +249,6 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
       setLoading(false);
     }
   };
-
-  // Transform subjects for dropdown
-  const subjectOptions = availableSubjects.map(subject => ({
-    id: subject.subjectId,
-    name: subject.name,
-    extra: `${subject.level} • ${subject.duration}h`
-  }));
 
   return (
     <div className="add-trainer-form card">
@@ -220,7 +326,8 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
         </div>
 
         <div className="form-row">
-          <div className="form-group">
+          <div className="form-group" ref={dropdownRef}>
+            <label>Subjects * (Required - At least one)</label>
             {loadingSubjects ? (
               <div className="loading-state">
                 <div className="spinner-small"></div>
@@ -230,17 +337,88 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
               <div className="no-items-warning">
                 <p>⚠️ No subjects available. Please add subjects first.</p>
                 <small>Go to Subjects page to add subjects before assigning trainers.</small>
+                <button 
+                  type="button" 
+                  className="btn-retry"
+                  onClick={fetchAvailableSubjects}
+                  style={{ marginTop: '0.75rem' }}
+                >
+                  🔄 Retry Loading Subjects
+                </button>
               </div>
             ) : (
-              <MultiSelectDropdown
-                label="Subjects * (Required - At least one)"
-                options={subjectOptions}
-                selectedValues={formData.subjects}
-                onChange={handleSubjectsChange}
-                placeholder="Search and select subjects..."
-                error={errors.subjects}
-                searchable={true}
-              />
+              <>
+                <div 
+                  className={`custom-dropdown ${dropdownOpen ? 'open' : ''} ${errors.subjects ? 'error' : ''}`}
+                  onClick={toggleDropdown}
+                >
+                  <div className="dropdown-selected">
+                    {formData.subjects.length === 0 
+                      ? <span className="placeholder">Click to select subjects ({availableSubjects.length} available)</span>
+                      : <span className="selected-count">{formData.subjects.length} subject(s) selected</span>
+                    }
+                    <span className={`dropdown-arrow ${dropdownOpen ? 'up' : 'down'}`}>
+                      {dropdownOpen ? '▲' : '▼'}
+                    </span>
+                  </div>
+                  
+                  {dropdownOpen && (
+                    <div className="dropdown-menu">
+                      <div className="dropdown-header">
+                        <div className="dropdown-title">Select Subjects ({availableSubjects.length} available)</div>
+                        <div className="dropdown-actions">
+                          <button 
+                            type="button" 
+                            className="action-btn select-all"
+                            onClick={handleSelectAll}
+                          >
+                            Select All
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-btn clear-all"
+                            onClick={handleClearAll}
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="dropdown-options">
+                        {availableSubjects.map((subject) => (
+                          <div 
+                            key={subject.subjectId} 
+                            className={`dropdown-option ${formData.subjects.includes(subject.subjectId) ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSubjectToggle(subject.subjectId);
+                            }}
+                          >
+                            <div className="option-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={formData.subjects.includes(subject.subjectId)}
+                                onChange={() => {}}
+                                className="checkbox"
+                              />
+                            </div>
+                            <div className="option-content">
+                              <div className="option-id">{subject.subjectId}</div>
+                              <div className="option-name">{subject.name}</div>
+                              <div className="option-extra">
+                                {subject.level && `${subject.level}`}
+                                {subject.duration && ` • ${subject.duration}h`}
+                                {subject.totalDuration && ` • ${subject.totalDuration}h`}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {errors.subjects && <span className="error-text">{errors.subjects}</span>}
+              </>
             )}
           </div>
 
@@ -261,6 +439,39 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
             <small className="required-notice">⚠️ Minimum 1 year required (1-50 years)</small>
           </div>
         </div>
+
+        {formData.subjects.length > 0 && (
+          <div className="selected-subjects-preview">
+            <div className="preview-header">
+              <strong>Selected Subjects ({formData.subjects.length})</strong>
+              <button 
+                type="button" 
+                className="clear-preview-btn"
+                onClick={handleClearAll}
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="selected-tags">
+              {formData.subjects.map((subjectId) => {
+                const subject = availableSubjects.find(s => s.subjectId === subjectId);
+                return (
+                  <span key={subjectId} className="selected-tag">
+                    {subject?.name || subjectId}
+                    <button 
+                      type="button" 
+                      className="remove-tag-btn"
+                      onClick={() => removeSubject(subjectId)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -337,6 +548,22 @@ const AddTrainer = ({ onSuccess, onCancel }) => {
 
         .no-items-warning small {
           color: #856404;
+          display: block;
+        }
+
+        .btn-retry {
+          padding: 0.5rem 1rem;
+          background: #667eea;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .btn-retry:hover {
+          background: #5568d3;
         }
 
         .spinner-small {
