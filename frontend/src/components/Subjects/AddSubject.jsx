@@ -57,18 +57,69 @@ const AddSubject = ({ onSuccess, onCancel }) => {
     }
   };
 
-  const fetchAvailableTrainers = async () => {
-    try {
-      setLoadingTrainers(true);
-      const response = await getAllTrainers();
-      setAvailableTrainers(response.data);
-    } catch (error) {
-      console.error('Failed to fetch trainers:', error);
-      toast.error('Failed to load trainers');
-    } finally {
-      setLoadingTrainers(false);
+const fetchAvailableSubjects = async () => {
+  try {
+    setLoadingSubjects(true);
+    console.log('🔍 Fetching subjects...');
+    
+    const response = await getAllSubjects();
+    
+    // 🔍 DETAILED DEBUG - DON'T SKIP THIS
+    console.log('📦 FULL RESPONSE:', JSON.stringify(response, null, 2));
+    console.log('📦 response.success:', response.success);
+    console.log('📦 response.count:', response.count);
+    console.log('📦 response.data:', response.data);
+    console.log('📦 Is response.data an array?', Array.isArray(response.data));
+    
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      console.log('📦 First subject in array:', response.data[0]);
+      console.log('📦 First subject subjectId:', response.data[0]?.subjectId);
+      console.log('📦 First subject name:', response.data[0]?.name);
     }
-  };
+    
+    // Extract subjects
+    const subjects = response.data || [];
+    console.log('✅ Extracted subjects array:', subjects);
+    console.log('📏 Number of subjects:', subjects.length);
+    
+    // Filter validation - CHECK EACH FIELD
+    const validSubjects = subjects.filter(s => {
+      const hasSubject = !!s;
+      const hasSubjectId = !!(s && s.subjectId);
+      const hasName = !!(s && s.name);
+      
+      console.log(`Validating subject:`, {
+        subject: s,
+        hasSubject,
+        hasSubjectId,
+        hasName,
+        result: hasSubject && hasSubjectId && hasName
+      });
+      
+      return hasSubject && hasSubjectId && hasName;
+    });
+    
+    console.log('✅ Valid subjects after filtering:', validSubjects);
+    
+    setAvailableSubjects(validSubjects);
+    
+    if (validSubjects.length === 0) {
+      console.warn('⚠️ No valid subjects found');
+      toast.warning('No subjects available. Please add subjects first.');
+    } else {
+      console.log(`✅ Loaded ${validSubjects.length} subjects successfully`);
+    }
+  } catch (error) {
+    console.error('❌ Failed to fetch subjects:', error);
+    console.error('Error response:', error.response);
+    console.error('Error message:', error.message);
+    
+    toast.error('Failed to load subjects. Please try again.');
+    setAvailableSubjects([]);
+  } finally {
+    setLoadingSubjects(false);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;

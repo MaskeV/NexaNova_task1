@@ -37,7 +37,8 @@ const CourseRow = ({ course }) => {
           background: 'linear-gradient(135deg,#667eea,#764ba2)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <FaGraduationCap color="white" size={18} />
+          <FaGraduationCap
+           color="white" size={18} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e', marginBottom: 5,
