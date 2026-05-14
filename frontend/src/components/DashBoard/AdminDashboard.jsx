@@ -1,4 +1,4 @@
-// frontend/src/components/DashBoard/AdminDashboard.jsx — FIXED VERSION
+// frontend/src/components/DashBoard/AdminDashboard.jsx — REPLACE ENTIRE FILE
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -37,8 +37,7 @@ const CourseRow = ({ course }) => {
           background: 'linear-gradient(135deg,#667eea,#764ba2)',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <FaGraduationCap
-           color="white" size={18} />
+          <FaGraduationCap color="white" size={18} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e', marginBottom: 5,
@@ -206,14 +205,13 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      let trainers = [], subjects = [], courses = [], students = [];
+      let trainers = [], subjects = [], courses = [], enrollments = [];
 
       await Promise.allSettled([
         axios.get(`${BASE}/trainer`, getHeaders()).then(r => { trainers = r.data?.data || []; }),
         axios.get(`${BASE}/subject`, getHeaders()).then(r => { subjects = r.data?.data || []; }),
         axios.get(`${BASE}/courses`, getHeaders()).then(r => { courses = r.data?.data || []; }),
-        // FIXED: Fetch all students from /students endpoint
-        axios.get(`${BASE}/students`, getHeaders()).then(r => { students = r.data?.data || []; }),
+        axios.get(`${BASE}/enrollments`, getHeaders()).then(r => { enrollments = r.data?.data || []; }),
       ]);
 
       // Build subjects map for enriching courses
@@ -232,10 +230,15 @@ const AdminDashboard = () => {
           .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0))
       }));
 
+      // Count unique students from enrollments
+      const uniqueStudents = new Set(
+        enrollments.map(e => e.studentEmail || e.studentId || e.student)
+      ).size;
+
       setData({
         totalTrainers: trainers.length,
         totalCourses: courses.length,
-        totalStudents: students.length, // FIXED: Count all students
+        totalStudents: uniqueStudents,
         recentTrainers: trainers.slice(0, 5),
         recentCourses: enrichedCourses.slice(0, 5),
       });
@@ -255,11 +258,11 @@ const AdminDashboard = () => {
     },
     {
       label: 'Total Courses', value: data.totalCourses,
-      icon: <FaUsers />, gradient: 'linear-gradient(135deg,#10b981,#059669)', to: '/courses'
+      icon: <FaGraduationCap />, gradient: 'linear-gradient(135deg,#10b981,#059669)', to: '/courses'
     },
     {
       label: 'Total Students', value: data.totalStudents,
-      icon: <FaUsers />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: '/students'
+      icon: <FaUserGraduate />, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', to: null
     },
   ];
 
