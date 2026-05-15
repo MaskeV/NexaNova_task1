@@ -1,91 +1,122 @@
-// backend/src/models/Technology.js - Mock Evaluation Technology Model
+// backend/src/models/Evaluation.js - Mock Evaluation Model
 const mongoose = require('mongoose');
 
-const technologySchema = new mongoose.Schema({
-  technologyId: {
-    type: String,
-    required: [true, 'Technology ID is required'],
-    unique: true,
-    trim: true,
-    uppercase: true,
-    validate: {
-      validator: function(v) {
-        return /^TECH\d{3}$/.test(v);
-      },
-      message: 'Technology ID must be in format TECH001, TECH002, etc.'
-    }
+const evaluationSchema = new mongoose.Schema({
+  batch: {
+    type: String, // Reference to Batch.batchId
+    required: [true, 'Batch is required'],
+    ref: 'Batch'
   },
-  name: {
-    type: String,
-    required: [true, 'Technology name is required'],
-    trim: true,
-    unique: true,
-    minlength: [2, 'Technology name must be at least 2 characters'],
-    maxlength: [50, 'Technology name cannot exceed 50 characters']
+  participant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Participant is required']
   },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters']
+  evaluator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Evaluator is required']
   },
-  category: {
-    type: String,
-    enum: {
-      values: ['Programming', 'Framework', 'Database', 'Cloud', 'DevOps', 'Data Science', 'Mobile', 'Other'],
-      message: 'Invalid category'
-    },
-    default: 'Other'
+  technology: {
+    type: String, // Reference to Technology.technologyId
+    required: [true, 'Technology is required'],
+    ref: 'Technology'
   },
-  // Number of rounds configured for this technology
-  rounds: {
+  round: {
     type: Number,
-    required: [true, 'Number of rounds is required'],
-    min: [1, 'At least 1 round is required'],
-    max: [5, 'Maximum 5 rounds allowed'],
+    required: [true, 'Round number is required'],
+    min: [1, 'Round must be at least 1'],
     validate: {
       validator: function(v) {
         return Number.isInteger(v);
       },
-      message: 'Number of rounds must be a whole number'
-    },
-    default: 1
+      message: 'Round must be a whole number'
+    }
   },
-  // Evaluation criteria for each round (optional, can be customized)
-  evaluationCriteria: [{
-    roundNumber: {
-      type: Number,
-      required: true,
-      min: 1
-    },
+  scores: [{
     criteriaName: {
       type: String,
       required: true,
       trim: true
     },
+    score: {
+      type: Number,
+      required: true,
+      min: 0
+    },
     maxScore: {
       type: Number,
       required: true,
-      min: 1,
-      max: 100
+      min: 1
     },
-    description: String
+    comments: String
   }],
-  isActive: {
-    type: Boolean,
-    default: true
+  totalScore: {
+    type: Number,
+    default: 0,
+    min: 0
   },
-  createdBy: {
+  feedback: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Feedback cannot exceed 2000 characters']
+  },
+  status: {
+    type: String,
+    enum: {
+      values: ['pending', 'in-progress', 'completed'],
+      message: 'Status must be pending, in-progress, or completed'
+    },
+    default: 'pending'
+  },
+  assignedDate: {
+    type: Date,
+    default: Date.now
+  },
+  completedDate: {
+    type: Date
+  },
+  assignedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true
   }
 }, {
   timestamps: true
 });
 
-// Indexes
-technologySchema.index({ technologyId: 1 });
-technologySchema.index({ name: 1 });
-technologySchema.index({ category: 1 });
-technologySchema.index({ isActive: 1 });
+// Indexes for faster queries
+evaluationSchema.index({ batch: 1, participant: 1, round: 1, technology: 1 }, { unique: true });
+evaluationSchema.index({ evaluator: 1, status: 1 });
+evaluationSchema.index({ participant: 1 });
+evaluationSchema.index({ batch: 1 });
+evaluationSchema.index({ technology: 1 });
 
-module.exports = mongoose.model('Technology', technologySchema);
+// Virtual to check if evaluation is completed
+evaluationSchema.virtual('isCompleted').get(function() {
+  return this.status === 'completed';
+});
+
+// Method to calculate total score
+evaluationSchema.methods.calculateTotalScore = function() {
+  if (this.scores && this.scores.length > 0) {
+    this.totalScore = this.scores.reduce((sum, s) => sum + (s.score || 0), 0);
+  }
+  return this.totalScore;
+};
+
+// Pre-save hook to calculate total score
+evaluationSchema.pre('save', function(next) {
+  if (this.isModified('scores')) {
+    this.calculateTotalScore();
+  }
+  
+  // Set completed date when status changes to completed
+  if (this.isModified('status') && this.status === 'completed' && !this.completedDate) {
+    this.completedDate = new Date();
+  }
+  
+  next();
+});
+
+module.exports = mongoose.model('Evaluation', evaluationSchema);
